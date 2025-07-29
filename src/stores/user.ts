@@ -1,14 +1,23 @@
-// src/stores/user.ts
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useDocsStore } from './docs'
 
 export const useUserStore = defineStore('user', () => {
   const role = ref<'admin' | 'user' | null>(null)
 
+  // ✅ Load role from localStorage when store is created
+  const storedRole = localStorage.getItem('userRole')
+  if (storedRole === 'admin' || storedRole === 'user') {
+    role.value = storedRole
+  }
+
   function login(selectedRole: 'admin' | 'user') {
+
     role.value = selectedRole
+    localStorage.setItem('userRole', selectedRole)
+
     const docsStore = useDocsStore()
+    docsStore.forceReload()
     docsStore.docs = [
       {
         id: Date.now(),
@@ -27,7 +36,15 @@ export const useUserStore = defineStore('user', () => {
 
   function logout() {
     role.value = null
+    localStorage.removeItem('userRole')
   }
 
-  return { role, login, logout }
+  const isLoggedIn = () => role.value !== null
+
+  return {
+    role,
+    login,
+    logout,
+    isLoggedIn,
+  }
 })
