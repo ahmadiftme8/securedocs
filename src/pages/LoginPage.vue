@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/user'
+import { useUserStore } from '@/stores/user'
 
 const user = useUserStore()
 const router = useRouter()
