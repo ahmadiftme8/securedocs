@@ -17,7 +17,7 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('userRole', selectedRole)
 
     const docsStore = useDocsStore()
-    docsStore.forceReload()
+
     docsStore.docs = [
       {
         id: Date.now(),

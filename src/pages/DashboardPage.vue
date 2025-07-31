@@ -34,6 +34,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -42,6 +44,9 @@ import { useDocsStore } from '@/stores/docs'
 const user = useUserStore()
 const docsStore = useDocsStore()
 const router = useRouter()
+onMounted(() => {
+  docsStore.forceReload()
+})
 
 const role = computed(() => user.role)
 const showOnlyMine = ref(false)
