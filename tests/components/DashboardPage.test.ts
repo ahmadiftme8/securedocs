@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import DashboardPage from '@/views/DashboardPage.vue'
+import DashboardPage from '@/pages/DashboardPage.vue'
 import { createTestingPinia } from '@pinia/testing'
 import { createRouter, createWebHistory } from 'vue-router'
+import { ref } from 'vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,35 +11,46 @@ const router = createRouter({
 })
 
 describe('DashboardPage.vue', () => {
-  beforeEach(() => {
-    // Clean test setup happens here if needed
-  })
+  it('uploads a document and displays it in the list', async () => {
+    const docs = ref([])
 
-  it('lets user upload a document and displays it', async () => {
     render(DashboardPage, {
       global: {
         plugins: [
           createTestingPinia({
+            stubActions: false,
             initialState: {
-              user: { role: 'user' },
-              docs: { docs: [] }
+              user: { role: 'user' }
             },
-            createSpy: () => () => {}
+            createSpy: () => () => {},
+            defineStore: {
+              docs: () => ({
+                docs,
+                uploadDoc: (name: string, uploadedBy: string) => {
+                  docs.value.push({
+                    id: Date.now(),
+                    name,
+                    uploadedBy,
+                    createdAt: new Date().toISOString()
+                  })
+                },
+                deleteDoc: () => {}
+              })
+            }
           }),
           router
         ]
       }
     })
 
-    // Type a document name
+    // Upload a document
     const input = screen.getByPlaceholderText('Enter document name...')
-    await fireEvent.update(input, 'TestDocument.pdf')
+    await fireEvent.update(input, 'MyReport.pdf')
 
-    // Click the Upload button
     const uploadButton = screen.getByText('Upload')
     await fireEvent.click(uploadButton)
 
-    // Expect the new doc to appear in the list
-    expect(screen.getByText(/TestDocument.pdf/i)).toBeTruthy()
+    // Expect to see the uploaded document
+    expect(screen.getByText('MyReport.pdf')).toBeTruthy()
   })
 })
