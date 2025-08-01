@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   test: {
+    setupFiles: './tests/setup.ts',  // point to the setup file you created,
     globals: true,
     environment: 'jsdom',
   },
