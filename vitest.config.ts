@@ -10,8 +10,13 @@ export default defineConfig({
     },
   },
   test: {
-    setupFiles: './tests/setup.ts',  // point to the setup file you created,
+    // Move setup file to src directory to avoid conflict with Playwright
+    setupFiles: './src/test-setup.ts',
     globals: true,
     environment: 'jsdom',
+    // Only include component tests from src directory
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Exclude the tests folder (used by Playwright)
+    exclude: ['tests/**/*', 'cypress/**/*', 'e2e/**/*', 'node_modules/**/*'],
   },
 })
