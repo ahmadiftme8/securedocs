@@ -688,7 +688,15 @@ async function deleteDoc(id: number) {
 }
 
 async function handleLogout() {
-  await logout()
+  try {
+    console.log('🔄 Dashboard logout clicked')
+    await logout()
+    console.log('✅ Logout completed successfully')
+  } catch (error) {
+    console.error('❌ Logout failed in dashboard:', error)
+    // The logout function already handles fallbacks, so we don't need to do much here
+    showNotification('error', 'Logout Issue', 'Logout completed but there may have been an issue')
+  }
 }
 
 // Utility functions

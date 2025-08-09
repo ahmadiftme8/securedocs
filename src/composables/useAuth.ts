@@ -1,10 +1,12 @@
-// src/composables/useAuth.ts
+// src/composables/useAuth.ts - Fixed version
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import type { LoginCredentials, RegisterCredentials, User } from '@/types/auth'
 import { computed } from 'vue'
 
 export function useAuth() {
   const authStore = useAuthStore()
+  const router = useRouter()
 
   async function login(credentials: LoginCredentials & { role?: 'admin' | 'user' } = {}) {
     try {
@@ -205,6 +207,49 @@ export function useAuth() {
     }
   }
 
+  // FIXED LOGOUT FUNCTION
+  async function logout() {
+    try {
+      console.log('🔄 Starting logout process...')
+
+      // Clear the auth store
+      authStore.clearAuth()
+      console.log('✅ Auth store cleared')
+
+      // Clear all localStorage items
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('auth_token') // In case you're using this key
+      console.log('✅ LocalStorage cleared')
+
+      // Clear sessionStorage as well
+      sessionStorage.removeItem('access_token')
+      sessionStorage.removeItem('refresh_token')
+      sessionStorage.removeItem('user')
+      sessionStorage.removeItem('auth_token')
+      console.log('✅ SessionStorage cleared')
+
+      // Navigate to login page
+      console.log('🚀 Navigating to login...')
+      try {
+        await router.push('/login')
+        console.log('✅ Navigation successful')
+      } catch (routerError) {
+        console.warn('⚠️ Router navigation failed, using window.location:', routerError)
+        window.location.href = '/login'
+      }
+
+    } catch (error) {
+      console.error('❌ Logout error:', error)
+
+      // Fallback: force clear everything and redirect
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = '/login'
+    }
+  }
+
   const user = computed(() => authStore.user)
 
   function hasRole(role: string) {
@@ -217,10 +262,6 @@ export function useAuth() {
 
   async function mockLogin(role: 'admin' | 'user') {
     return login({ email: `${role}@example.com`, password: 'password' })
-  }
-
-  function logout() {
-    authStore.clearAuth()
   }
 
   function initializeAuth() {
