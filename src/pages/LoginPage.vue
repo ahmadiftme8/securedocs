@@ -135,13 +135,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ /*  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   padding: 20px;
   width: 100%;
+
+background-color: #e5e5f7;
+opacity: 1;
+background-image: radial-gradient(circle at center center, #62299196, #e5e5f7), repeating-radial-gradient(circle at center center, #444df70a, #646cf705, 50px, transparent 60px, transparent 50px);
+background-blend-mode: multiply;
+
 }
 
 .login-container {
-  background: white;
+  background: #ffffff;
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
@@ -345,7 +351,7 @@ html, body {
   align-items: center;
   justify-content: center;
 
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
 }
 
 
