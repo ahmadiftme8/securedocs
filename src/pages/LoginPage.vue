@@ -35,11 +35,7 @@
           {{ loginError }}
         </div>
 
-        <button
-          type="submit"
-          class="login-button"
-          :disabled="isLoading || !isFormValid"
-        >
+        <button type="submit" class="login-button" :disabled="isLoading || !isFormValid">
           <span v-if="isLoading" class="loading-spinner"></span>
           {{ isLoading ? 'Signing in...' : 'Sign In' }}
         </button>
@@ -49,18 +45,10 @@
       <div class="demo-login" v-if="isDevelopment">
         <p>Demo Login (Development Only):</p>
         <div class="demo-buttons">
-          <button
-            @click="handleDemoLogin('user')"
-            :disabled="isLoading"
-            class="demo-button user"
-          >
+          <button @click="handleDemoLogin('user')" :disabled="isLoading" class="demo-button user">
             Login as User
           </button>
-          <button
-            @click="handleDemoLogin('admin')"
-            :disabled="isLoading"
-            class="demo-button admin"
-          >
+          <button @click="handleDemoLogin('admin')" :disabled="isLoading" class="demo-button admin">
             Login as Admin
           </button>
         </div>
@@ -88,15 +76,13 @@ const route = useRoute()
 
 const credentials = reactive<LoginCredentials>({
   email: '',
-  password: ''
+  password: '',
 })
 
 const isDevelopment = computed(() => import.meta.env.DEV)
 
 const isFormValid = computed(() => {
-  return credentials.email.trim() &&
-         credentials.password.trim() &&
-         credentials.email.includes('@')
+  return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
 
 async function handleSubmit() {
@@ -135,15 +121,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
- /*  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+  /*  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   padding: 20px;
   width: 100%;
 
-background-color: #e5e5f7;
-opacity: 1;
-background-image: radial-gradient(circle at center center, #62299196, #e5e5f7), repeating-radial-gradient(circle at center center, #444df70a, #646cf705, 50px, transparent 60px, transparent 50px);
-background-blend-mode: multiply;
-
+  background: #eeaeca;
+  background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);
 }
 
 .login-container {
@@ -253,7 +236,9 @@ background-blend-mode: multiply;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .demo-login {
@@ -330,9 +315,8 @@ background-blend-mode: multiply;
   text-decoration: underline;
 }
 
-
-
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -350,13 +334,5 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-
-
 }
-
-
-
-
-
-
 </style>

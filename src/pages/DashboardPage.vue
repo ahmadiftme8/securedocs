@@ -109,14 +109,21 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="doc in filteredDocs" :key="doc.id" :class="{ uploading: doc.status === 'uploading' }">
+              <tr
+                v-for="doc in filteredDocs"
+                :key="doc.id"
+                :class="{ uploading: doc.status === 'uploading' }"
+              >
                 <td class="doc-name">
                   <div class="doc-icon">{{ docsStore.getFileIcon(doc.name) }}</div>
                   <div class="doc-info">
                     <div class="doc-title">{{ doc.name }}</div>
                     <div v-if="doc.status === 'uploading'" class="upload-progress">
                       <div class="progress-bar">
-                        <div class="progress-fill" :style="{ width: `${doc.uploadProgress || 0}%` }"></div>
+                        <div
+                          class="progress-fill"
+                          :style="{ width: `${doc.uploadProgress || 0}%` }"
+                        ></div>
                       </div>
                       <span class="progress-text">{{ doc.uploadProgress || 0 }}%</span>
                     </div>
@@ -210,7 +217,7 @@
             class="upload-area"
             :class="{
               'drag-over': isDragOver,
-              'has-files': selectedFiles.length > 0
+              'has-files': selectedFiles.length > 0,
             }"
             @dragover.prevent="handleDragOver"
             @dragleave.prevent="handleDragLeave"
@@ -232,7 +239,7 @@
               <p>or <span class="link-text">click to browse</span></p>
               <div class="upload-info">
                 <small>
-                  Supported: {{ allowedExtensions.join(', ').toUpperCase() }}<br>
+                  Supported: {{ allowedExtensions.join(', ').toUpperCase() }}<br />
                   Max size: {{ formatFileSize(maxFileSize) }} per file
                 </small>
               </div>
@@ -251,8 +258,8 @@
                   :key="`${file.name}-${index}`"
                   class="file-item"
                   :class="{
-                    'invalid': fileValidationErrors[index],
-                    'uploading': uploadingFiles.has(file.name)
+                    invalid: fileValidationErrors[index],
+                    uploading: uploadingFiles.has(file.name),
                   }"
                 >
                   <div class="file-icon">{{ getFileIconByType(file.type) }}</div>
@@ -323,7 +330,8 @@
           <!-- Upload Summary -->
           <div v-if="selectedFiles.length > 0" class="upload-summary">
             <div class="summary-item">
-              <strong>Files:</strong> {{ validFiles.length }} valid, {{ invalidFiles.length }} invalid
+              <strong>Files:</strong> {{ validFiles.length }} valid,
+              {{ invalidFiles.length }} invalid
             </div>
             <div class="summary-item">
               <strong>Total size:</strong> {{ formatFileSize(totalSelectedSize) }}
@@ -417,13 +425,15 @@ const totalUploads = ref(0)
 const currentUploadFile = ref('')
 
 // Notifications
-const notifications = ref<Array<{
-  id: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  title: string
-  message: string
-  timeout?: number
-}>>([])
+const notifications = ref<
+  Array<{
+    id: string
+    type: 'success' | 'error' | 'warning' | 'info'
+    title: string
+    message: string
+    timeout?: number
+  }>
+>([])
 
 // File constraints
 const maxFileSize = computed(() => docsStore.MAX_FILE_SIZE)
@@ -518,9 +528,13 @@ const getUploadButtonText = computed(() => {
 })
 
 // Watch for file validation
-watch(selectedFiles, () => {
-  validateSelectedFiles()
-}, { deep: true })
+watch(
+  selectedFiles,
+  () => {
+    validateSelectedFiles()
+  },
+  { deep: true },
+)
 
 // Methods
 function validateSelectedFiles() {
@@ -575,8 +589,8 @@ function handleDrop(event: DragEvent) {
 
 function addFiles(newFiles: File[]) {
   // Filter out duplicates
-  const existingNames = selectedFiles.value.map(f => f.name)
-  const uniqueFiles = newFiles.filter(file => !existingNames.includes(file.name))
+  const existingNames = selectedFiles.value.map((f) => f.name)
+  const uniqueFiles = newFiles.filter((file) => !existingNames.includes(file.name))
 
   selectedFiles.value.push(...uniqueFiles)
 
@@ -618,11 +632,19 @@ async function startUpload() {
       globalUploadProgress.value = Math.round((completedUploads.value / totalUploads.value) * 100)
     }
 
-    showNotification('success', 'Upload Complete', `Successfully uploaded ${validFiles.value.length} file(s).`)
+    showNotification(
+      'success',
+      'Upload Complete',
+      `Successfully uploaded ${validFiles.value.length} file(s).`,
+    )
     closeUploadModal()
   } catch (error) {
     console.error('Upload failed:', error)
-    showNotification('error', 'Upload Failed', error instanceof Error ? error.message : 'Unknown error occurred')
+    showNotification(
+      'error',
+      'Upload Failed',
+      error instanceof Error ? error.message : 'Unknown error occurred',
+    )
   } finally {
     isUploading.value = false
     showGlobalProgress.value = false
@@ -724,31 +746,44 @@ function getFileIconByType(type: string): string {
     'text/plain': '📄',
     'image/png': '🖼️',
     'image/jpeg': '🖼️',
-    'image/gif': '🖼️'
+    'image/gif': '🖼️',
   }
   return iconMap[type] || '📄'
 }
 
 function getStatusText(status?: string): string {
   switch (status) {
-    case 'uploading': return 'Uploading'
-    case 'failed': return 'Failed'
-    case 'completed': return 'Completed'
-    default: return 'Ready'
+    case 'uploading':
+      return 'Uploading'
+    case 'failed':
+      return 'Failed'
+    case 'completed':
+      return 'Completed'
+    default:
+      return 'Ready'
   }
 }
 
 function getActivityIcon(type: string): string {
   switch (type) {
-    case 'upload': return '⬆️'
-    case 'delete': return '🗑️'
-    case 'download': return '⬇️'
-    default: return '📝'
+    case 'upload':
+      return '⬆️'
+    case 'delete':
+      return '🗑️'
+    case 'download':
+      return '⬇️'
+    default:
+      return '📝'
   }
 }
 
 // Notification system
-function showNotification(type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, timeout = 5000) {
+function showNotification(
+  type: 'success' | 'error' | 'warning' | 'info',
+  title: string,
+  message: string,
+  timeout = 5000,
+) {
   const id = Date.now().toString()
   notifications.value.push({ id, type, title, message, timeout })
 
@@ -758,7 +793,7 @@ function showNotification(type: 'success' | 'error' | 'warning' | 'info', title:
 }
 
 function dismissNotification(id: string) {
-  const index = notifications.value.findIndex(n => n.id === id)
+  const index = notifications.value.findIndex((n) => n.id === id)
   if (index > -1) {
     notifications.value.splice(index, 1)
   }
@@ -782,6 +817,9 @@ onMounted(() => {
   padding: 0;
   box-sizing: border-box;
   overflow-x: hidden;
+
+  background: #eeaeca;
+  background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);
 }
 
 .dashboard-header {
@@ -1753,8 +1791,12 @@ onMounted(() => {
 
 /* Animations */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes slideInUp {
