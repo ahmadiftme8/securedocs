@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import type { LoginCredentials, RegisterCredentials, User } from '@/types/auth'
 import { computed } from 'vue'
 
-const API_BASE_URL = import.meta.env.VITE_AUTH_API_URL || '/.netlify/functions'
+const API_BASE_URL = '/.netlify/functions'
 
 export function useAuth() {
   const authStore = useAuthStore()
