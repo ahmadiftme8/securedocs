@@ -42,7 +42,7 @@
       </form>
 
       <!-- Demo/Development only - Remove in production -->
-      <div class="demo-login" v-if="isDevelopment">
+      <div class="demo-login" v-if="isDevelopment && enableMockLogin">
         <p>Demo Login (Development Only):</p>
         <div class="demo-buttons">
           <button @click="handleDemoLogin('user')" :disabled="isLoading" class="demo-button user">
@@ -52,6 +52,25 @@
             Login as Admin
           </button>
         </div>
+        <p class="demo-note">
+          These accounts will be created automatically if they don't exist.
+        </p>
+      </div>
+
+      <!-- Real User Test Section -->
+      <div class="test-accounts" v-if="isDevelopment">
+        <p>Test with real accounts:</p>
+        <div class="test-info">
+          <p><strong>1. Register a new account</strong> using the form below</p>
+          <p><strong>2. Or use test credentials:</strong></p>
+          <div class="test-credentials">
+            <code>Email: test@securedocs.com</code><br>
+            <code>Password: TestPassword123</code>
+          </div>
+          <button @click="fillTestCredentials" class="test-fill-button">
+            Fill Test Credentials
+          </button>
+        </div>
       </div>
 
       <div class="login-footer">
@@ -59,13 +78,23 @@
           Don't have an account?
           <router-link to="/register">Sign up</router-link>
         </p>
+        <p class="forgot-password">
+          <a href="#" @click.prevent="handleForgotPassword">Forgot your password?</a>
+        </p>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="connection-status" v-if="isDevelopment">
+        <p :class="connectionStatus.class">
+          {{ connectionStatus.message }}
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onMounted } from 'vue'
+import { reactive, computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import type { LoginCredentials } from '@/types/auth'
@@ -79,7 +108,13 @@ const credentials = reactive<LoginCredentials>({
   password: '',
 })
 
+const connectionStatus = ref({
+  class: 'status-checking',
+  message: 'Checking server connection...'
+})
+
 const isDevelopment = computed(() => import.meta.env.DEV)
+const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN === 'true')
 
 const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
@@ -98,19 +133,67 @@ async function handleSubmit() {
 }
 
 async function handleDemoLogin(role: 'admin' | 'user') {
-  const success = await mockLogin(role)
+  try {
+    // First try to create the demo account if it doesn't exist
+    const demoCredentials = {
+      email: `${role}@securedocs.com`,
+      password: 'DemoPassword123'
+    }
 
-  if (success) {
-    const redirectPath = (route.query.redirect as string) || '/dashboard'
-    router.push(redirectPath)
+    const success = await login(demoCredentials)
+
+    if (success) {
+      const redirectPath = (route.query.redirect as string) || '/dashboard'
+      router.push(redirectPath)
+    } else {
+      // If login fails, the account might not exist
+      // For demo purposes, we'll show a message
+      alert(`Demo ${role} account not found. Please register first or use the test credentials.`)
+    }
+  } catch (error) {
+    console.error('Demo login error:', error)
+  }
+}
+
+function fillTestCredentials() {
+  credentials.email = 'test@securedocs.com'
+  credentials.password = 'TestPassword123'
+}
+
+function handleForgotPassword() {
+  alert('Password reset functionality would be implemented here')
+}
+
+async function checkServerConnection() {
+  try {
+    const response = await fetch(import.meta.env.VITE_AUTH_API_URL + '/health')
+    if (response.ok) {
+      connectionStatus.value = {
+        class: 'status-connected',
+        message: '✅ Connected to authentication server'
+      }
+    } else {
+      throw new Error('Server responded with error')
+    }
+  } catch (error) {
+    connectionStatus.value = {
+      class: 'status-disconnected',
+      message: '❌ Cannot connect to authentication server'
+    }
+    console.error('Server connection check failed:', error)
   }
 }
 
 // Focus email input on mount
-onMounted(() => {
+onMounted(async () => {
   const emailInput = document.getElementById('email')
   if (emailInput) {
     emailInput.focus()
+  }
+
+  // Check server connection in development
+  if (isDevelopment.value) {
+    await checkServerConnection()
   }
 })
 </script>
@@ -121,10 +204,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /*  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   padding: 20px;
   width: 100%;
-
   background: #eeaeca;
   background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);
 }
@@ -134,8 +215,8 @@ onMounted(() => {
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-
-  max-width: 400px;
+  max-width: 450px;
+  width: 100%;
 }
 
 .login-header {
@@ -254,6 +335,13 @@ onMounted(() => {
   color: #666;
 }
 
+.demo-note {
+  font-size: 12px !important;
+  color: #999 !important;
+  font-style: italic;
+  margin-top: 10px !important;
+}
+
 .demo-buttons {
   display: flex;
   gap: 10px;
@@ -296,13 +384,57 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.test-accounts {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  margin-bottom: 20px;
+}
+
+.test-accounts p {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.test-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.test-credentials {
+  background: #e9ecef;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-family: 'Courier New', monospace;
+}
+
+.test-fill-button {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.test-fill-button:hover {
+  background: #138496;
+}
+
 .login-footer {
   text-align: center;
 }
 
 .login-footer p {
   color: #666;
-  margin: 0;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 .login-footer a {
@@ -315,24 +447,30 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.forgot-password {
+  margin-top: 15px !important;
 }
 
-.login-page {
-  position: fixed; /* instead of relative/default */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.connection-status {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 4px;
+}
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.status-checking {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-disconnected {
+  background: #f8d7da;
+  color: #721c24;
 }
 </style>

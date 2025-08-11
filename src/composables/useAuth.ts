@@ -1,43 +1,93 @@
-// src/composables/useAuth.ts - Fixed version
+// src/composables/useAuth.ts - Netlify Integration
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import type { LoginCredentials, RegisterCredentials, User } from '@/types/auth'
 import { computed } from 'vue'
 
+const API_BASE_URL = import.meta.env.VITE_AUTH_API_URL || '/.netlify/functions'
+
 export function useAuth() {
   const authStore = useAuthStore()
   const router = useRouter()
 
-  async function login(credentials: LoginCredentials & { role?: 'admin' | 'user' } = {}) {
+  // Helper function to make API calls
+  async function apiCall(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE_URL}${endpoint}`
+
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    }
+
+    // Add auth token if available
+    const token = localStorage.getItem('access_token')
+    if (token && !config.headers?.['Authorization']) {
+      config.headers = {
+        ...config.headers,
+        'Authorization': `Bearer ${token}`,
+      }
+    }
+
+    const response = await fetch(url, config)
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`)
+    }
+
+    return data
+  }
+
+  async function login(credentials: LoginCredentials) {
     try {
       authStore.setLoading(true)
       authStore.setError(null)
 
-      // Simulated API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      console.log('🔐 Attempting login for:', credentials.email)
 
-      // Determine role:
-      const userRole = credentials.role
-        ? credentials.role
-        : credentials.email.includes('admin')
-          ? 'admin'
-          : 'user'
+      const response = await apiCall('/auth-login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      })
 
-      const fakeUser: User = {
-        id: '1',
-        email: credentials.email,
-        role: userRole,
-        name: credentials.email.split('@')[0],
+      console.log('✅ Login successful:', response.user.email)
+
+      // Store tokens
+      localStorage.setItem('access_token', response.tokens.accessToken)
+      if (response.tokens.refreshToken) {
+        localStorage.setItem('refresh_token', response.tokens.refreshToken)
       }
 
-      authStore.setUser(fakeUser)
-
-      localStorage.setItem('access_token', 'fake-token')
+      // Set user in store
+      authStore.setUser(response.user)
 
       return true
-    } catch (err) {
-      authStore.setError('Login failed')
+
+    } catch (error) {
+      console.error('❌ Login failed:', error)
+
+      let errorMessage = 'Login failed'
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid email or password')) {
+          errorMessage = 'Invalid email or password'
+        } else if (error.message.includes('locked')) {
+          errorMessage = 'Account temporarily locked due to too many failed attempts'
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Unable to connect to server. Please try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+
+      authStore.setError(errorMessage)
       return false
+
     } finally {
       authStore.setLoading(false)
     }
@@ -48,71 +98,50 @@ export function useAuth() {
       authStore.setLoading(true)
       authStore.setError(null)
 
-      // Validate credentials
-      if (!credentials.name?.trim()) {
-        throw new Error('Name is required')
-      }
-      if (!credentials.email?.trim()) {
-        throw new Error('Email is required')
-      }
-      if (!credentials.password) {
-        throw new Error('Password is required')
-      }
-      if (credentials.password.length < 8) {
-        throw new Error('Password must be at least 8 characters')
-      }
-      if (!credentials.role) {
-        throw new Error('Role is required')
-      }
+      console.log('📝 Attempting registration for:', credentials.email)
 
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(credentials.email)) {
-        throw new Error('Invalid email format')
-      }
-
-      // Password strength validation
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-      if (!passwordRegex.test(credentials.password)) {
-        throw new Error('Password must contain uppercase, lowercase, and number')
-      }
-
-      // Simulate API registration call
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate email already exists error (for demo)
-          if (credentials.email.toLowerCase() === 'test@example.com') {
-            reject(new Error('Email already exists'))
-            return
-          }
-          resolve(true)
-        }, 1000) // Longer delay to simulate real API
+      const response = await apiCall('/auth-register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+          name: credentials.name,
+          role: credentials.role,
+        }),
       })
 
-      // Generate a unique user ID (in real app, this comes from backend)
-      const userId = Date.now().toString()
+      console.log('✅ Registration successful:', response.user.email)
 
-      const newUser: User = {
-        id: userId,
-        email: credentials.email.toLowerCase(),
-        role: credentials.role,
-        name: credentials.name.trim(),
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
+      // Store tokens
+      localStorage.setItem('access_token', response.tokens.accessToken)
+      if (response.tokens.refreshToken) {
+        localStorage.setItem('refresh_token', response.tokens.refreshToken)
       }
 
-      // Set user in store (this will automatically log them in)
-      authStore.setUser(newUser)
-
-      // Store fake tokens
-      localStorage.setItem('access_token', `fake-token-${userId}`)
-      localStorage.setItem('refresh_token', `fake-refresh-${userId}`)
+      // Set user in store
+      authStore.setUser(response.user)
 
       return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed'
+
+    } catch (error) {
+      console.error('❌ Registration failed:', error)
+
+      let errorMessage = 'Registration failed'
+      if (error instanceof Error) {
+        if (error.message.includes('Email already registered')) {
+          errorMessage = 'An account with this email already exists'
+        } else if (error.message.includes('All fields required')) {
+          errorMessage = 'Please fill in all required fields'
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Unable to connect to server. Please try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+
       authStore.setError(errorMessage)
-      throw err
+      throw new Error(errorMessage)
+
     } finally {
       authStore.setLoading(false)
     }
@@ -123,27 +152,27 @@ export function useAuth() {
       authStore.setLoading(true)
       authStore.setError(null)
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      console.log('👤 Updating profile...')
 
-      const currentUser = authStore.user
-      if (!currentUser) {
-        throw new Error('No user logged in')
-      }
+      const response = await apiCall('/auth-profile', {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      })
 
-      const updatedUser: User = {
-        ...currentUser,
-        ...updates,
-        id: currentUser.id, // Prevent ID changes
-        email: currentUser.email, // Prevent email changes in profile update
-      }
+      console.log('✅ Profile updated successfully')
 
-      authStore.setUser(updatedUser)
+      // Update user in store
+      authStore.setUser(response.user)
+
       return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Profile update failed'
+
+    } catch (error) {
+      console.error('❌ Profile update failed:', error)
+
+      const errorMessage = error instanceof Error ? error.message : 'Profile update failed'
       authStore.setError(errorMessage)
       return false
+
     } finally {
       authStore.setLoading(false)
     }
@@ -154,33 +183,21 @@ export function useAuth() {
       authStore.setLoading(true)
       authStore.setError(null)
 
-      // Validate new password
-      if (newPassword.length < 8) {
-        throw new Error('New password must be at least 8 characters')
-      }
-
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/
-      if (!passwordRegex.test(newPassword)) {
-        throw new Error('New password must contain uppercase, lowercase, and number')
-      }
-
-      // Simulate API call to change password
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate current password validation
-          if (currentPassword !== 'currentpass') {
-            reject(new Error('Current password is incorrect'))
-            return
-          }
-          resolve(true)
-        }, 500)
+      const response = await apiCall('/auth-change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
       })
 
       return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Password change failed'
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Password change failed'
       authStore.setError(errorMessage)
-      throw err
+      throw error
+
     } finally {
       authStore.setLoading(false)
     }
@@ -193,48 +210,61 @@ export function useAuth() {
         throw new Error('No refresh token available')
       }
 
-      // Simulate API call to refresh token
-      await new Promise((resolve) => setTimeout(resolve, 300))
+      console.log('🔄 Refreshing token...')
 
-      const newToken = `refreshed-token-${Date.now()}`
-      localStorage.setItem('access_token', newToken)
+      const response = await apiCall('/auth-refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      })
 
-      return newToken
-    } catch (err) {
-      console.error('Token refresh failed:', err)
-      logout()
-      throw err
+      // Update access token
+      localStorage.setItem('access_token', response.accessToken)
+      console.log('✅ Token refreshed successfully')
+
+      return response.accessToken
+
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error)
+
+      // If refresh fails, logout the user
+      await logout()
+      throw error
     }
   }
 
-  // FIXED LOGOUT FUNCTION
   async function logout() {
     try {
       console.log('🔄 Starting logout process...')
 
-      // Clear the auth store
-      authStore.clearAuth()
-      console.log('✅ Auth store cleared')
+      // Try to revoke refresh token on backend
+      try {
+        const refreshToken = localStorage.getItem('refresh_token')
+        if (refreshToken) {
+          await apiCall('/auth-logout', {
+            method: 'POST',
+            body: JSON.stringify({ refreshToken }),
+          })
+        }
+      } catch (error) {
+        console.warn('⚠️ Backend logout failed, continuing with local logout:', error)
+      }
 
-      // Clear all localStorage items
+      // Clear local storage
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
-      localStorage.removeItem('auth_token') // In case you're using this key
-      console.log('✅ LocalStorage cleared')
-
-      // Clear sessionStorage as well
       sessionStorage.removeItem('access_token')
       sessionStorage.removeItem('refresh_token')
       sessionStorage.removeItem('user')
-      sessionStorage.removeItem('auth_token')
-      console.log('✅ SessionStorage cleared')
+
+      // Clear auth store
+      authStore.clearAuth()
+      console.log('✅ Logout completed')
 
       // Navigate to login page
-      console.log('🚀 Navigating to login...')
       try {
         await router.push('/login')
-        console.log('✅ Navigation successful')
+        console.log('✅ Navigation to login successful')
       } catch (routerError) {
         console.warn('⚠️ Router navigation failed, using window.location:', routerError)
         window.location.href = '/login'
@@ -250,6 +280,46 @@ export function useAuth() {
     }
   }
 
+  async function checkAuth() {
+    try {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        return false
+      }
+
+      // Verify token with backend
+      const response = await apiCall('/auth-profile')
+
+      // Update user in store
+      authStore.setUser(response.user)
+
+      return true
+
+    } catch (error) {
+      console.warn('🔍 Auth check failed:', error)
+
+      // Try to refresh token
+      try {
+        await refreshToken()
+        return await checkAuth() // Retry with new token
+      } catch (refreshError) {
+        console.warn('🔄 Token refresh failed during auth check')
+        await logout()
+        return false
+      }
+    }
+  }
+
+  // Mock login for development (remove in production)
+  async function mockLogin(role: 'admin' | 'user') {
+    const mockCredentials = {
+      email: `${role}@securedocs.com`,
+      password: 'Password123'
+    }
+
+    return await login(mockCredentials)
+  }
+
   const user = computed(() => authStore.user)
 
   function hasRole(role: string) {
@@ -260,15 +330,13 @@ export function useAuth() {
     return authStore.hasAnyRole(roles)
   }
 
-  async function mockLogin(role: 'admin' | 'user') {
-    return login({ email: `${role}@example.com`, password: 'password' })
-  }
-
   function initializeAuth() {
-    authStore.initializeAuth()
+    // Check if user is already authenticated
+    checkAuth().catch(() => {
+      // Silently fail - user will need to login
+    })
   }
 
-  // Check if user session is valid
   function isSessionValid(): boolean {
     const token = localStorage.getItem('access_token')
     const user = authStore.user
@@ -299,6 +367,37 @@ export function useAuth() {
     return getUserPermissions().includes(permission)
   }
 
+  // Auto-refresh token when it's about to expire
+  function startTokenRefreshTimer() {
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
+    try {
+      // Decode JWT to get expiration time (basic decode, no verification)
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const expirationTime = payload.exp * 1000 // Convert to milliseconds
+      const currentTime = Date.now()
+      const timeUntilExpiry = expirationTime - currentTime
+
+      // Refresh token 5 minutes before expiry
+      const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60000) // At least 1 minute
+
+      if (refreshTime > 0) {
+        setTimeout(async () => {
+          try {
+            await refreshToken()
+            startTokenRefreshTimer() // Start timer for new token
+          } catch (error) {
+            console.error('Auto token refresh failed:', error)
+            await logout()
+          }
+        }, refreshTime)
+      }
+    } catch (error) {
+      console.error('Error setting up token refresh timer:', error)
+    }
+  }
+
   return {
     // Auth actions
     login,
@@ -308,7 +407,9 @@ export function useAuth() {
     refreshToken,
     mockLogin,
     logout,
+    checkAuth,
     initializeAuth,
+    startTokenRefreshTimer,
 
     // State
     user,
