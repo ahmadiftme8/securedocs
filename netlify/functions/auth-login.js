@@ -1,14 +1,14 @@
 // netlify/functions/auth-login.js
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const { createClient } = require('@supabase/supabase-js')
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 )
 
-exports.handler = async (event, context) => {
+export const handler = async (event) => {
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -56,10 +56,39 @@ exports.handler = async (event, context) => {
       }
     }
 
+    // Check if account is locked
+    if (user.locked_until && new Date() < new Date(user.locked_until)) {
+      return {
+        statusCode: 423,
+        headers,
+        body: JSON.stringify({
+          error: 'Account temporarily locked due to too many failed attempts'
+        })
+      }
+    }
+
     // Check password
     const isValid = await bcrypt.compare(password, user.password_hash)
 
     if (!isValid) {
+      // Increment failed login attempts
+      const failedAttempts = (user.failed_login_attempts || 0) + 1
+      let lockedUntil = null
+
+      // Lock account after 5 failed attempts for 30 minutes
+      if (failedAttempts >= 5) {
+        lockedUntil = new Date()
+        lockedUntil.setMinutes(lockedUntil.getMinutes() + 30)
+      }
+
+      await supabase
+        .from('users')
+        .update({
+          failed_login_attempts: failedAttempts,
+          locked_until: lockedUntil?.toISOString() || null
+        })
+        .eq('id', user.id)
+
       return {
         statusCode: 401,
         headers,
@@ -67,10 +96,14 @@ exports.handler = async (event, context) => {
       }
     }
 
-    // Update last login
+    // Reset failed attempts and update last login
     await supabase
       .from('users')
-      .update({ last_login_at: new Date().toISOString() })
+      .update({
+        failed_login_attempts: 0,
+        locked_until: null,
+        last_login_at: new Date().toISOString()
+      })
       .eq('id', user.id)
 
     // Create token
@@ -105,7 +138,10 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Login failed' })
+      body: JSON.stringify({
+        error: 'Login failed',
+        details: error.message
+      })
     }
   }
 }

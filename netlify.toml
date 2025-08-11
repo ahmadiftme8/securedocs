@@ -3,6 +3,9 @@
   command = "npm run build"
   functions = "netlify/functions"
 
+[build.environment]
+  NODE_VERSION = "18"
+
 [[redirects]]
   from = "/api/auth/*"
   to = "/.netlify/functions/auth-*"
@@ -12,3 +15,6 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions]
+  node_bundler = "esbuild"

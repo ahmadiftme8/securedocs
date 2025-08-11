@@ -1,14 +1,14 @@
 // netlify/functions/auth-register.js
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const { createClient } = require('@supabase/supabase-js')
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 )
 
-exports.handler = async (event, context) => {
+export const handler = async (event) => {
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -41,6 +41,15 @@ exports.handler = async (event, context) => {
       }
     }
 
+    // Password validation
+    if (password.length < 8) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Password must be at least 8 characters' })
+      }
+    }
+
     // Check if user exists
     const { data: existing } = await supabase
       .from('users')
@@ -70,7 +79,10 @@ exports.handler = async (event, context) => {
       .select('id, email, name, role, created_at')
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Database error:', error)
+      throw error
+    }
 
     // Create tokens
     const accessToken = jwt.sign(
@@ -103,7 +115,10 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Registration failed' })
+      body: JSON.stringify({
+        error: 'Registration failed',
+        details: error.message
+      })
     }
   }
 }
