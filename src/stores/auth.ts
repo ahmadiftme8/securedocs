@@ -1,4 +1,4 @@
-// src/stores/auth.ts
+// src/stores/auth.ts - Fixed with missing methods
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '@/types/auth'
@@ -74,12 +74,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // MISSING METHODS - These were causing the errors!
   function setLoading(loading: boolean) {
     isLoading.value = loading
   }
 
   function setError(errorMessage: string | null) {
     error.value = errorMessage
+  }
+
+  function clearError() {
+    error.value = null
   }
 
   function updateActivity() {
@@ -102,17 +107,6 @@ export const useAuthStore = defineStore('auth', () => {
     // Clear any other app-specific data
     localStorage.removeItem('preferences')
     localStorage.removeItem('recent_files')
-  }
-
-  // In your auth store, add this method:
-  function clearError() {
-    error.value = null
-  }
-
-  // And return it:
-  return {
-    // ... existing returns
-    clearError,
   }
 
   // Initialize from localStorage on app start
@@ -208,5 +202,47 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setUserPreferences(preferences: Record<string, any>) {
     localStorage.setItem('preferences', JSON.stringify(preferences))
+  }
+
+  return {
+    // State
+    user,
+    isLoading,
+    error,
+    lastActivity,
+
+    // Getters
+    isAuthenticated,
+    isAdmin,
+    isUser,
+    userName,
+    userInitials,
+    isSessionExpired,
+
+    // Actions
+    setUser,
+    updateUser,
+    setLoading, // ← This was missing!
+    setError, // ← This was missing!
+    clearError, // ← This was missing!
+    updateActivity,
+    clearAuth,
+    initializeAuth,
+
+    // Role checking
+    hasRole,
+    hasAnyRole,
+    canAccessAdminPanel,
+    canManageUsers,
+    canUploadFiles,
+    canDeleteFile,
+
+    // Account status
+    isAccountActive,
+    needsReauthentication,
+
+    // Preferences
+    getUserPreferences,
+    setUserPreferences,
   }
 })
