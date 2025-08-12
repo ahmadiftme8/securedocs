@@ -58,7 +58,7 @@
         </button>
       </form>
 
-      <!-- Enhanced Debug Section -->
+      <!-- Replace your debug section with this fixed version -->
       <div
         style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px"
         v-if="isDevelopment"
@@ -69,9 +69,9 @@
         <code>authStore.error: "{{ authStore?.error || 'null' }}"</code><br />
         <code>isLoading: {{ isLoading }}</code
         ><br />
-        <code>Environment: {{ import.meta.env.MODE }}</code
+        <code>Environment: {{ envMode }}</code
         ><br />
-        <code>API URL: {{ import.meta.env.VITE_AUTH_API_URL }}</code
+        <code>API URL: {{ apiUrl }}</code
         ><br />
 
         <!-- Test buttons -->
@@ -150,8 +150,11 @@ const connectionStatus = ref({
   message: 'Checking server connection...',
 })
 
+// Fixed computed properties for template
 const isDevelopment = computed(() => import.meta.env.DEV)
 const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN === 'true')
+const envMode = computed(() => import.meta.env.MODE)
+const apiUrl = computed(() => import.meta.env.VITE_AUTH_API_URL)
 
 const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
@@ -194,8 +197,8 @@ async function handleSubmit() {
   }
 
   console.log('🔐 Attempting login for:', credentials.email)
-  console.log('🌍 Environment:', import.meta.env.MODE)
-  console.log('🔗 API Base URL:', import.meta.env.VITE_AUTH_API_URL)
+  console.log('🌍 Environment:', envMode.value)
+  console.log('🔗 API Base URL:', apiUrl.value)
 
   // Clear previous messages
   successMessage.value = ''
