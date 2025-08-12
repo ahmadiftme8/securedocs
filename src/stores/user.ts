@@ -12,7 +12,6 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function login(selectedRole: 'admin' | 'user') {
-
     role.value = selectedRole
     localStorage.setItem('userRole', selectedRole)
 
