@@ -52,11 +52,34 @@
           <div class="success-message">{{ successMessage }}</div>
         </div>
 
+        <!-- Make sure you have this in your template -->
+        <div class="form-error" v-if="loginError">
+          <div class="error-icon">⚠️</div>
+          <div class="error-content">
+            <div class="error-title">Login Failed</div>
+            <div class="error-message">{{ loginError }}</div>
+            <div class="error-suggestion" v-if="showSignupSuggestion">
+              Don't have an account?
+              <router-link to="/register" class="error-link">Sign up here</router-link>
+            </div>
+          </div>
+        </div>
+
         <button type="submit" class="login-button" :disabled="isLoading || !isFormValid">
           <span v-if="isLoading" class="loading-spinner"></span>
           {{ isLoading ? 'Signing in...' : 'Sign In' }}
         </button>
       </form>
+
+      <!-- Temporary Debug Section - Add this after your form -->
+      <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px">
+        <strong>Debug Info:</strong><br />
+        <code>loginError: {{ loginError }}</code
+        ><br />
+        <code>isLoading: {{ isLoading }}</code
+        ><br />
+        <code>authStore.error: {{ $store ?? 'No store' }}</code>
+      </div>
 
       <!-- Demo/Development only -->
       <div class="demo-login" v-if="isDevelopment && enableMockLogin">
@@ -69,9 +92,7 @@
             Login as Admin
           </button>
         </div>
-        <p class="demo-note">
-          These accounts will be created automatically if they don't exist.
-        </p>
+        <p class="demo-note">These accounts will be created automatically if they don't exist.</p>
       </div>
 
       <!-- Test Accounts -->
@@ -80,9 +101,7 @@
         <div class="test-info">
           <p><strong>1. Register a new account</strong> first, then login</p>
           <p><strong>2. Or use existing credentials</strong></p>
-          <button @click="clearError" class="test-fill-button">
-            Clear Error Message
-          </button>
+          <button @click="clearError" class="test-fill-button">Clear Error Message</button>
         </div>
       </div>
 
@@ -124,7 +143,7 @@ const credentials = reactive<LoginCredentials>({
 const successMessage = ref('')
 const connectionStatus = ref({
   class: 'status-checking',
-  message: 'Checking server connection...'
+  message: 'Checking server connection...',
 })
 
 const isDevelopment = computed(() => import.meta.env.DEV)
@@ -191,7 +210,7 @@ async function handleDemoLogin(role: 'admin' | 'user') {
   try {
     const demoCredentials = {
       email: `${role}@securedocs.com`,
-      password: 'DemoPassword123'
+      password: 'DemoPassword123',
     }
 
     const success = await login(demoCredentials)
@@ -218,10 +237,11 @@ function handleForgotPassword() {
 async function checkServerConnection() {
   try {
     const response = await fetch('/.netlify/functions/auth-register')
-    if (response.status === 405) { // Method not allowed = function exists
+    if (response.status === 405) {
+      // Method not allowed = function exists
       connectionStatus.value = {
         class: 'status-connected',
-        message: '✅ Connected to authentication server'
+        message: '✅ Connected to authentication server',
       }
     } else {
       throw new Error('Unexpected response')
@@ -229,7 +249,7 @@ async function checkServerConnection() {
   } catch (error) {
     connectionStatus.value = {
       class: 'status-disconnected',
-      message: '❌ Cannot connect to authentication server'
+      message: '❌ Cannot connect to authentication server',
     }
     console.error('Server connection check failed:', error)
   }
@@ -605,9 +625,16 @@ onMounted(async () => {
 
 /* Animations */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 @keyframes slideDown {
