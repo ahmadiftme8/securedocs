@@ -16,7 +16,7 @@
             required
             :disabled="isLoading"
             placeholder="Enter your email"
-            :class="{ 'error-input': loginError }"
+            :class="{ 'error-input': currentError }"
           />
         </div>
 
@@ -29,16 +29,16 @@
             required
             :disabled="isLoading"
             placeholder="Enter your password"
-            :class="{ 'error-input': loginError }"
+            :class="{ 'error-input': currentError }"
           />
         </div>
 
-        <!-- Enhanced Error Display -->
-        <div class="form-error" v-if="loginError">
+        <!-- SINGLE Enhanced Error Display -->
+        <div class="form-error" v-if="currentError">
           <div class="error-icon">⚠️</div>
           <div class="error-content">
             <div class="error-title">Login Failed</div>
-            <div class="error-message">{{ loginError }}</div>
+            <div class="error-message">{{ currentError }}</div>
             <div class="error-suggestion" v-if="showSignupSuggestion">
               Don't have an account?
               <router-link to="/register" class="error-link">Sign up here</router-link>
@@ -52,40 +52,35 @@
           <div class="success-message">{{ successMessage }}</div>
         </div>
 
-        <!-- Make sure you have this in your template -->
-        <div class="form-error" v-if="loginError">
-          <div class="error-icon">⚠️</div>
-          <div class="error-content">
-            <div class="error-title">Login Failed</div>
-            <div class="error-message">{{ loginError }}</div>
-            <div class="error-suggestion" v-if="showSignupSuggestion">
-              Don't have an account?
-              <router-link to="/register" class="error-link">Sign up here</router-link>
-            </div>
-          </div>
-        </div>
-
         <button type="submit" class="login-button" :disabled="isLoading || !isFormValid">
           <span v-if="isLoading" class="loading-spinner"></span>
           {{ isLoading ? 'Signing in...' : 'Sign In' }}
         </button>
       </form>
 
-      <!-- Temporary Debug Section - Add this after your form -->
+      <!-- Enhanced Debug Section -->
       <div
         style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px"
         v-if="isDevelopment"
       >
         <strong>Debug Info:</strong><br />
-        <code>loginError: {{ loginError }}</code
-        ><br />
+        <code>currentError: "{{ currentError || 'null' }}"</code><br />
+        <code>loginError: "{{ loginError || 'null' }}"</code><br />
+        <code>authStore.error: "{{ authStore?.error || 'null' }}"</code><br />
         <code>isLoading: {{ isLoading }}</code
-        ><br />
-        <code>authStore.error: {{ authStore?.error || 'No error' }}</code
         ><br />
         <code>Environment: {{ import.meta.env.MODE }}</code
         ><br />
-        <code>API URL: {{ import.meta.env.VITE_AUTH_API_URL }}</code>
+        <code>API URL: {{ import.meta.env.VITE_AUTH_API_URL }}</code
+        ><br />
+
+        <!-- Test buttons -->
+        <div style="margin-top: 10px">
+          <button @click="testError" style="margin-right: 10px; padding: 5px">
+            Test Error Display
+          </button>
+          <button @click="clearError" style="padding: 5px">Clear Error</button>
+        </div>
       </div>
 
       <!-- Demo/Development only -->
@@ -142,6 +137,7 @@ import { useAuthStore } from '@/stores/auth'
 const { login, mockLogin, loginError, isLoading } = useAuth()
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const credentials = reactive<LoginCredentials>({
   email: '',
@@ -161,35 +157,37 @@ const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
 
-const authStore = useAuthStore()
+// Safe error handling - combine both sources
+const currentError = computed(() => {
+  // Safely access loginError and authStore.error
+  const authError = loginError?.value || null
+  const storeError = authStore?.error || null
+
+  return authError || storeError || null
+})
 
 // Show signup suggestion for "Invalid email or password" errors
 const showSignupSuggestion = computed(() => {
-  return loginError.value && loginError.value.includes('Invalid email or password')
+  return currentError.value && currentError.value.includes('Invalid email or password')
 })
 
-// Watch for login error changes
-watch(loginError, (newError) => {
+// Watch for error changes
+watch(currentError, (newError) => {
   if (newError) {
-    console.log('🚨 Login error detected:', newError)
-    // Clear success message if there's an error
+    console.log('🚨 Error detected:', newError)
     successMessage.value = ''
   }
 })
 
 // Clear error when user starts typing
 watch([() => credentials.email, () => credentials.password], () => {
-  if (loginError.value) {
-    // Clear error after user starts typing (with small delay)
+  if (currentError.value) {
     setTimeout(() => {
-      if (loginError.value) {
-        clearError()
-      }
+      clearError()
     }, 2000)
   }
 })
 
-// SINGLE handleSubmit function with proper debugging
 async function handleSubmit() {
   if (!isFormValid.value) {
     return
@@ -202,25 +200,28 @@ async function handleSubmit() {
   // Clear previous messages
   successMessage.value = ''
 
-  const success = await login(credentials)
+  try {
+    const success = await login(credentials)
 
-  if (success) {
-    successMessage.value = 'Login successful! Redirecting...'
-    console.log('✅ Login successful, redirecting...')
+    if (success) {
+      successMessage.value = 'Login successful! Redirecting...'
+      console.log('✅ Login successful, redirecting...')
 
-    // Redirect after short delay to show success message
-    setTimeout(() => {
-      const redirectPath = (route.query.redirect as string) || '/dashboard'
-      router.push(redirectPath)
-    }, 1000)
-  } else {
-    console.log('❌ Login failed, error should be displayed')
-    console.log('❌ Current error state:', loginError.value)
-    console.log('❌ Auth store error:', authStore.error)
-
-    // Force update the error display if needed
-    if (!loginError.value && authStore.error) {
-      console.log('🔄 Auth store has error but loginError is null, this might be the issue')
+      setTimeout(() => {
+        const redirectPath = (route.query.redirect as string) || '/dashboard'
+        router.push(redirectPath)
+      }, 1000)
+    } else {
+      console.log('❌ Login failed, error should be displayed')
+      console.log('❌ loginError:', loginError?.value)
+      console.log('❌ authStore.error:', authStore?.error)
+      console.log('❌ currentError:', currentError.value)
+    }
+  } catch (error) {
+    console.error('❌ Login function threw error:', error)
+    // Fallback error handling
+    if (!currentError.value) {
+      authStore.setError('Login failed. Please try again.')
     }
   }
 }
@@ -244,9 +245,24 @@ async function handleDemoLogin(role: 'admin' | 'user') {
 }
 
 function clearError() {
-  authStore.clearError() // This method exists in your auth store
-  successMessage.value = ''
-  console.log('🧹 Error cleared')
+  try {
+    if (authStore?.clearError) {
+      authStore.clearError()
+    }
+    successMessage.value = ''
+    console.log('🧹 Error cleared')
+  } catch (error) {
+    console.error('Error clearing error:', error)
+  }
+}
+
+function testError() {
+  try {
+    authStore.setError('Test error message - Invalid email or password')
+    console.log('🧪 Test error set:', authStore.error)
+  } catch (error) {
+    console.error('Error setting test error:', error)
+  }
 }
 
 function handleForgotPassword() {
@@ -266,7 +282,6 @@ async function checkServerConnection() {
       }),
     })
 
-    // Any response (even 401) means the function exists
     connectionStatus.value = {
       class: 'status-connected',
       message: '✅ Connected to authentication server',
@@ -280,14 +295,12 @@ async function checkServerConnection() {
   }
 }
 
-// Focus email input on mount
 onMounted(async () => {
   const emailInput = document.getElementById('email')
   if (emailInput) {
     emailInput.focus()
   }
 
-  // Check server connection in development
   if (isDevelopment.value) {
     await checkServerConnection()
   }
