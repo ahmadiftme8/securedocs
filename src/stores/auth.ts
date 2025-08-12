@@ -104,6 +104,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('recent_files')
   }
 
+  // In your auth store, add this method:
+  function clearError() {
+    error.value = null
+  }
+
+  // And return it:
+  return {
+    // ... existing returns
+    clearError,
+  }
+
   // Initialize from localStorage on app start
   function initializeAuth() {
     try {
@@ -197,46 +208,5 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setUserPreferences(preferences: Record<string, any>) {
     localStorage.setItem('preferences', JSON.stringify(preferences))
-  }
-
-  return {
-    // State
-    user,
-    isLoading,
-    error,
-    lastActivity,
-
-    // Getters
-    isAuthenticated,
-    isAdmin,
-    isUser,
-    userName,
-    userInitials,
-    isSessionExpired,
-
-    // Actions
-    setUser,
-    updateUser,
-    setLoading,
-    setError,
-    updateActivity,
-    clearAuth,
-    initializeAuth,
-
-    // Role checking
-    hasRole,
-    hasAnyRole,
-    canAccessAdminPanel,
-    canManageUsers,
-    canUploadFiles,
-    canDeleteFile,
-
-    // Account status
-    isAccountActive,
-    needsReauthentication,
-
-    // Preferences
-    getUserPreferences,
-    setUserPreferences,
   }
 })

@@ -1,4 +1,4 @@
-// src/composables/useAuth.ts - Netlify Integration
+// src/composables/useAuth.ts - Clean TypeScript version
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import type { LoginCredentials, RegisterCredentials, User } from '@/types/auth'
@@ -11,37 +11,42 @@ export function useAuth() {
   const router = useRouter()
 
   // Helper function to make API calls
-  async function apiCall(endpoint: string, options: RequestInit = {}) {
+  async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${API_BASE_URL}${endpoint}`
 
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
     }
 
     // Add auth token if available
     const token = localStorage.getItem('access_token')
-    if (token && !config.headers?.['Authorization']) {
-      config.headers = {
-        ...config.headers,
-        'Authorization': `Bearer ${token}`,
-      }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const config: RequestInit = {
+      ...options,
+      headers,
     }
 
     const response = await fetch(url, config)
-    const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`)
+      let errorMessage = `HTTP ${response.status}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.error || errorMessage
+      } catch {
+        // If response is not JSON, use default message
+      }
+      throw new Error(errorMessage)
     }
 
-    return data
+    return await response.json()
   }
 
-  async function login(credentials: LoginCredentials) {
+  async function login(credentials: LoginCredentials): Promise<boolean> {
     try {
       authStore.setLoading(true)
       authStore.setError(null)
@@ -68,7 +73,6 @@ export function useAuth() {
       authStore.setUser(response.user)
 
       return true
-
     } catch (error) {
       console.error('❌ Login failed:', error)
 
@@ -87,13 +91,12 @@ export function useAuth() {
 
       authStore.setError(errorMessage)
       return false
-
     } finally {
       authStore.setLoading(false)
     }
   }
 
-  async function registerUser(credentials: RegisterCredentials) {
+  async function registerUser(credentials: RegisterCredentials): Promise<boolean> {
     try {
       authStore.setLoading(true)
       authStore.setError(null)
@@ -122,7 +125,6 @@ export function useAuth() {
       authStore.setUser(response.user)
 
       return true
-
     } catch (error) {
       console.error('❌ Registration failed:', error)
 
@@ -141,13 +143,12 @@ export function useAuth() {
 
       authStore.setError(errorMessage)
       throw new Error(errorMessage)
-
     } finally {
       authStore.setLoading(false)
     }
   }
 
-  async function updateProfile(updates: Partial<User>) {
+  async function updateProfile(updates: Partial<User>): Promise<boolean> {
     try {
       authStore.setLoading(true)
       authStore.setError(null)
@@ -165,25 +166,23 @@ export function useAuth() {
       authStore.setUser(response.user)
 
       return true
-
     } catch (error) {
       console.error('❌ Profile update failed:', error)
 
       const errorMessage = error instanceof Error ? error.message : 'Profile update failed'
       authStore.setError(errorMessage)
       return false
-
     } finally {
       authStore.setLoading(false)
     }
   }
 
-  async function changePassword(currentPassword: string, newPassword: string) {
+  async function changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
     try {
       authStore.setLoading(true)
       authStore.setError(null)
 
-      const response = await apiCall('/auth-change-password', {
+      await apiCall('/auth-change-password', {
         method: 'POST',
         body: JSON.stringify({
           currentPassword,
@@ -192,21 +191,19 @@ export function useAuth() {
       })
 
       return true
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Password change failed'
       authStore.setError(errorMessage)
       throw error
-
     } finally {
       authStore.setLoading(false)
     }
   }
 
-  async function refreshToken() {
+  async function refreshToken(): Promise<string> {
     try {
-      const refreshToken = localStorage.getItem('refresh_token')
-      if (!refreshToken) {
+      const refreshTokenValue = localStorage.getItem('refresh_token')
+      if (!refreshTokenValue) {
         throw new Error('No refresh token available')
       }
 
@@ -214,7 +211,7 @@ export function useAuth() {
 
       const response = await apiCall('/auth-refresh', {
         method: 'POST',
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refreshToken: refreshTokenValue }),
       })
 
       // Update access token
@@ -222,7 +219,6 @@ export function useAuth() {
       console.log('✅ Token refreshed successfully')
 
       return response.accessToken
-
     } catch (error) {
       console.error('❌ Token refresh failed:', error)
 
@@ -232,17 +228,17 @@ export function useAuth() {
     }
   }
 
-  async function logout() {
+  async function logout(): Promise<void> {
     try {
       console.log('🔄 Starting logout process...')
 
       // Try to revoke refresh token on backend
       try {
-        const refreshToken = localStorage.getItem('refresh_token')
-        if (refreshToken) {
+        const refreshTokenValue = localStorage.getItem('refresh_token')
+        if (refreshTokenValue) {
           await apiCall('/auth-logout', {
             method: 'POST',
-            body: JSON.stringify({ refreshToken }),
+            body: JSON.stringify({ refreshToken: refreshTokenValue }),
           })
         }
       } catch (error) {
@@ -269,7 +265,6 @@ export function useAuth() {
         console.warn('⚠️ Router navigation failed, using window.location:', routerError)
         window.location.href = '/login'
       }
-
     } catch (error) {
       console.error('❌ Logout error:', error)
 
@@ -280,7 +275,7 @@ export function useAuth() {
     }
   }
 
-  async function checkAuth() {
+  async function checkAuth(): Promise<boolean> {
     try {
       const token = localStorage.getItem('access_token')
       if (!token) {
@@ -294,7 +289,6 @@ export function useAuth() {
       authStore.setUser(response.user)
 
       return true
-
     } catch (error) {
       console.warn('🔍 Auth check failed:', error)
 
@@ -310,11 +304,16 @@ export function useAuth() {
     }
   }
 
+  // Clear error function
+  function clearError(): void {
+    authStore.setError(null)
+  }
+
   // Mock login for development (remove in production)
-  async function mockLogin(role: 'admin' | 'user') {
+  async function mockLogin(role: 'admin' | 'user'): Promise<boolean> {
     const mockCredentials = {
       email: `${role}@securedocs.com`,
-      password: 'Password123'
+      password: 'Password123',
     }
 
     return await login(mockCredentials)
@@ -322,15 +321,15 @@ export function useAuth() {
 
   const user = computed(() => authStore.user)
 
-  function hasRole(role: string) {
+  function hasRole(role: string): boolean {
     return user.value?.role === role
   }
 
-  function hasAnyRole(roles: string[]) {
+  function hasAnyRole(roles: string[]): boolean {
     return authStore.hasAnyRole(roles)
   }
 
-  function initializeAuth() {
+  function initializeAuth(): void {
     // Check if user is already authenticated
     checkAuth().catch(() => {
       // Silently fail - user will need to login
@@ -339,8 +338,8 @@ export function useAuth() {
 
   function isSessionValid(): boolean {
     const token = localStorage.getItem('access_token')
-    const user = authStore.user
-    return !!(token && user)
+    const userValue = authStore.user
+    return !!(token && userValue)
   }
 
   // Get user permissions based on role
@@ -348,7 +347,7 @@ export function useAuth() {
     const userRole = user.value?.role
     if (!userRole) return []
 
-    const permissions = {
+    const permissions: Record<string, string[]> = {
       admin: [
         'read:files',
         'write:files',
@@ -368,7 +367,7 @@ export function useAuth() {
   }
 
   // Auto-refresh token when it's about to expire
-  function startTokenRefreshTimer() {
+  function startTokenRefreshTimer(): void {
     const token = localStorage.getItem('access_token')
     if (!token) return
 
@@ -410,6 +409,7 @@ export function useAuth() {
     checkAuth,
     initializeAuth,
     startTokenRefreshTimer,
+    clearError, // ← Added this
 
     // State
     user,

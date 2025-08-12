@@ -16,6 +16,7 @@
             required
             :disabled="isLoading"
             placeholder="Enter your email"
+            :class="{ 'error-input': loginError }"
           />
         </div>
 
@@ -28,11 +29,27 @@
             required
             :disabled="isLoading"
             placeholder="Enter your password"
+            :class="{ 'error-input': loginError }"
           />
         </div>
 
+        <!-- Enhanced Error Display -->
         <div class="form-error" v-if="loginError">
-          {{ loginError }}
+          <div class="error-icon">⚠️</div>
+          <div class="error-content">
+            <div class="error-title">Login Failed</div>
+            <div class="error-message">{{ loginError }}</div>
+            <div class="error-suggestion" v-if="showSignupSuggestion">
+              Don't have an account?
+              <router-link to="/register" class="error-link">Sign up here</router-link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div class="form-success" v-if="successMessage">
+          <div class="success-icon">✅</div>
+          <div class="success-message">{{ successMessage }}</div>
         </div>
 
         <button type="submit" class="login-button" :disabled="isLoading || !isFormValid">
@@ -41,7 +58,7 @@
         </button>
       </form>
 
-      <!-- Demo/Development only - Remove in production -->
+      <!-- Demo/Development only -->
       <div class="demo-login" v-if="isDevelopment && enableMockLogin">
         <p>Demo Login (Development Only):</p>
         <div class="demo-buttons">
@@ -57,18 +74,14 @@
         </p>
       </div>
 
-      <!-- Real User Test Section -->
+      <!-- Test Accounts -->
       <div class="test-accounts" v-if="isDevelopment">
         <p>Test with real accounts:</p>
         <div class="test-info">
-          <p><strong>1. Register a new account</strong> using the form below</p>
-          <p><strong>2. Or use test credentials:</strong></p>
-          <div class="test-credentials">
-            <code>Email: test@securedocs.com</code><br>
-            <code>Password: TestPassword123</code>
-          </div>
-          <button @click="fillTestCredentials" class="test-fill-button">
-            Fill Test Credentials
+          <p><strong>1. Register a new account</strong> first, then login</p>
+          <p><strong>2. Or use existing credentials</strong></p>
+          <button @click="clearError" class="test-fill-button">
+            Clear Error Message
           </button>
         </div>
       </div>
@@ -76,7 +89,7 @@
       <div class="login-footer">
         <p>
           Don't have an account?
-          <router-link to="/register">Sign up</router-link>
+          <router-link to="/register" class="signup-link">Sign up</router-link>
         </p>
         <p class="forgot-password">
           <a href="#" @click.prevent="handleForgotPassword">Forgot your password?</a>
@@ -94,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onMounted, ref } from 'vue'
+import { reactive, computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import type { LoginCredentials } from '@/types/auth'
@@ -108,6 +121,7 @@ const credentials = reactive<LoginCredentials>({
   password: '',
 })
 
+const successMessage = ref('')
 const connectionStatus = ref({
   class: 'status-checking',
   message: 'Checking server connection...'
@@ -120,21 +134,61 @@ const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
 
+// Show signup suggestion for "Invalid email or password" errors
+const showSignupSuggestion = computed(() => {
+  return loginError.value && loginError.value.includes('Invalid email or password')
+})
+
+// Watch for login error changes
+watch(loginError, (newError) => {
+  if (newError) {
+    console.log('🚨 Login error detected:', newError)
+    // Clear success message if there's an error
+    successMessage.value = ''
+  }
+})
+
+// Clear error when user starts typing
+watch([() => credentials.email, () => credentials.password], () => {
+  if (loginError.value) {
+    // Clear error after user starts typing (with small delay)
+    setTimeout(() => {
+      if (loginError.value) {
+        clearError()
+      }
+    }, 2000)
+  }
+})
+
 async function handleSubmit() {
-  if (!isFormValid.value) return
+  if (!isFormValid.value) {
+    return
+  }
+
+  console.log('🔐 Attempting login for:', credentials.email)
+
+  // Clear previous messages
+  successMessage.value = ''
 
   const success = await login(credentials)
 
   if (success) {
-    // Redirect to intended page or dashboard
-    const redirectPath = (route.query.redirect as string) || '/dashboard'
-    router.push(redirectPath)
+    successMessage.value = 'Login successful! Redirecting...'
+    console.log('✅ Login successful, redirecting...')
+
+    // Redirect after short delay to show success message
+    setTimeout(() => {
+      const redirectPath = (route.query.redirect as string) || '/dashboard'
+      router.push(redirectPath)
+    }, 1000)
+  } else {
+    console.log('❌ Login failed, error should be displayed')
+    // Error message is automatically set by the auth store
   }
 }
 
 async function handleDemoLogin(role: 'admin' | 'user') {
   try {
-    // First try to create the demo account if it doesn't exist
     const demoCredentials = {
       email: `${role}@securedocs.com`,
       password: 'DemoPassword123'
@@ -145,19 +199,16 @@ async function handleDemoLogin(role: 'admin' | 'user') {
     if (success) {
       const redirectPath = (route.query.redirect as string) || '/dashboard'
       router.push(redirectPath)
-    } else {
-      // If login fails, the account might not exist
-      // For demo purposes, we'll show a message
-      alert(`Demo ${role} account not found. Please register first or use the test credentials.`)
     }
   } catch (error) {
     console.error('Demo login error:', error)
   }
 }
 
-function fillTestCredentials() {
-  credentials.email = 'test@securedocs.com'
-  credentials.password = 'TestPassword123'
+function clearError() {
+  // You'll need to add a clearError method to your auth store
+  console.log('Clearing error message')
+  successMessage.value = ''
 }
 
 function handleForgotPassword() {
@@ -166,14 +217,14 @@ function handleForgotPassword() {
 
 async function checkServerConnection() {
   try {
-    const response = await fetch(import.meta.env.VITE_AUTH_API_URL + '/health')
-    if (response.ok) {
+    const response = await fetch('/.netlify/functions/auth-register')
+    if (response.status === 405) { // Method not allowed = function exists
       connectionStatus.value = {
         class: 'status-connected',
         message: '✅ Connected to authentication server'
       }
     } else {
-      throw new Error('Server responded with error')
+      throw new Error('Unexpected response')
     }
   } catch (error) {
     connectionStatus.value = {
@@ -257,7 +308,7 @@ onMounted(async () => {
   border: 2px solid #e1e5e9;
   border-radius: 8px;
   font-size: 16px;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
@@ -266,19 +317,94 @@ onMounted(async () => {
   border-color: #667eea;
 }
 
+.form-group input.error-input {
+  border-color: #dc3545;
+  background-color: #fdf2f2;
+}
+
 .form-group input:disabled {
   background-color: #f8f9fa;
   cursor: not-allowed;
 }
 
+/* Enhanced Error Styling */
 .form-error {
-  background-color: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 12px 16px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+  border: 1px solid #faa;
+  border-radius: 12px;
+  padding: 16px;
   margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-title {
+  font-weight: 600;
+  color: #c33;
   font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.error-message {
+  color: #c33;
+  font-size: 14px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.error-suggestion {
+  color: #856404;
+  font-size: 13px;
+  background: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.error-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.error-link:hover {
+  text-decoration: underline;
+}
+
+/* Success Message */
+.form-success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border: 1px solid #9ac49a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideDown 0.3s ease;
+}
+
+.success-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.success-message {
+  color: #155724;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .login-button {
@@ -291,7 +417,7 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,11 +426,13 @@ onMounted(async () => {
 
 .login-button:hover:not(:disabled) {
   opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .login-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .loading-spinner {
@@ -314,12 +442,6 @@ onMounted(async () => {
   border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .demo-login {
@@ -404,14 +526,6 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-.test-credentials {
-  background: #e9ecef;
-  padding: 10px;
-  border-radius: 4px;
-  margin: 10px 0;
-  font-family: 'Courier New', monospace;
-}
-
 .test-fill-button {
   background: #17a2b8;
   color: white;
@@ -421,6 +535,7 @@ onMounted(async () => {
   font-size: 12px;
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-top: 10px;
 }
 
 .test-fill-button:hover {
@@ -435,6 +550,20 @@ onMounted(async () => {
   color: #666;
   margin: 8px 0;
   font-size: 14px;
+}
+
+.signup-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.signup-link:hover {
+  background: #f0f8ff;
+  text-decoration: underline;
 }
 
 .login-footer a {
@@ -472,5 +601,41 @@ onMounted(async () => {
 .status-disconnected {
   background: #f8d7da;
   color: #721c24;
+}
+
+/* Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 24px;
+    margin: 10px;
+  }
+
+  .login-header h1 {
+    font-size: 24px;
+  }
 }
 </style>
