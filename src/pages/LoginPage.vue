@@ -72,13 +72,20 @@
       </form>
 
       <!-- Temporary Debug Section - Add this after your form -->
-      <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px">
+      <div
+        style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px"
+        v-if="isDevelopment"
+      >
         <strong>Debug Info:</strong><br />
         <code>loginError: {{ loginError }}</code
         ><br />
         <code>isLoading: {{ isLoading }}</code
         ><br />
-        <code>authStore.error: {{ $store ?? 'No store' }}</code>
+        <code>authStore.error: {{ authStore?.error || 'No error' }}</code
+        ><br />
+        <code>Environment: {{ import.meta.env.MODE }}</code
+        ><br />
+        <code>API URL: {{ import.meta.env.VITE_AUTH_API_URL }}</code>
       </div>
 
       <!-- Demo/Development only -->
@@ -130,6 +137,7 @@ import { reactive, computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import type { LoginCredentials } from '@/types/auth'
+import { useAuthStore } from '@/stores/auth'
 
 const { login, mockLogin, loginError, isLoading } = useAuth()
 const router = useRouter()
@@ -152,6 +160,8 @@ const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN ==
 const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
+
+const authStore = useAuthStore()
 
 // Show signup suggestion for "Invalid email or password" errors
 const showSignupSuggestion = computed(() => {
@@ -179,12 +189,15 @@ watch([() => credentials.email, () => credentials.password], () => {
   }
 })
 
+// SINGLE handleSubmit function with proper debugging
 async function handleSubmit() {
   if (!isFormValid.value) {
     return
   }
 
   console.log('🔐 Attempting login for:', credentials.email)
+  console.log('🌍 Environment:', import.meta.env.MODE)
+  console.log('🔗 API Base URL:', import.meta.env.VITE_AUTH_API_URL)
 
   // Clear previous messages
   successMessage.value = ''
@@ -202,7 +215,13 @@ async function handleSubmit() {
     }, 1000)
   } else {
     console.log('❌ Login failed, error should be displayed')
-    // Error message is automatically set by the auth store
+    console.log('❌ Current error state:', loginError.value)
+    console.log('❌ Auth store error:', authStore.error)
+
+    // Force update the error display if needed
+    if (!loginError.value && authStore.error) {
+      console.log('🔄 Auth store has error but loginError is null, this might be the issue')
+    }
   }
 }
 
@@ -225,9 +244,9 @@ async function handleDemoLogin(role: 'admin' | 'user') {
 }
 
 function clearError() {
-  // You'll need to add a clearError method to your auth store
-  console.log('Clearing error message')
+  authStore.clearError() // This method exists in your auth store
   successMessage.value = ''
+  console.log('🧹 Error cleared')
 }
 
 function handleForgotPassword() {
@@ -236,15 +255,21 @@ function handleForgotPassword() {
 
 async function checkServerConnection() {
   try {
-    const response = await fetch('/.netlify/functions/auth-register')
-    if (response.status === 405) {
-      // Method not allowed = function exists
-      connectionStatus.value = {
-        class: 'status-connected',
-        message: '✅ Connected to authentication server',
-      }
-    } else {
-      throw new Error('Unexpected response')
+    const response = await fetch('/.netlify/functions/auth-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: 'test@test.com',
+        password: 'test',
+      }),
+    })
+
+    // Any response (even 401) means the function exists
+    connectionStatus.value = {
+      class: 'status-connected',
+      message: '✅ Connected to authentication server',
     }
   } catch (error) {
     connectionStatus.value = {
