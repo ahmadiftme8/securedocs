@@ -1,6 +1,7 @@
-// src/router/index.ts
+// src/router/index.ts - Fixed with auth restoration
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAuth } from '@/composables/useAuth'
 
 // Lazy load components for better performance
 const LoginPage = () => import('@/pages/LoginPage.vue')
@@ -13,7 +14,7 @@ const UnauthorizedPage = () => import('@/pages/UnauthorizedPage.vue')
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/dashboard',
   },
   {
     path: '/login',
@@ -21,8 +22,8 @@ const routes: RouteRecordRaw[] = [
     component: LoginPage,
     meta: {
       requiresGuest: true,
-      title: 'Login - SecureDocs'
-    }
+      title: 'Login - SecureDocs',
+    },
   },
   {
     path: '/register',
@@ -30,8 +31,8 @@ const routes: RouteRecordRaw[] = [
     component: RegisterPage,
     meta: {
       requiresGuest: true,
-      title: 'Register - SecureDocs'
-    }
+      title: 'Register - SecureDocs',
+    },
   },
   {
     path: '/dashboard',
@@ -39,8 +40,8 @@ const routes: RouteRecordRaw[] = [
     component: DashboardPage,
     meta: {
       requiresAuth: true,
-      title: 'Dashboard - SecureDocs'
-    }
+      title: 'Dashboard - SecureDocs',
+    },
   },
   {
     path: '/profile',
@@ -48,8 +49,8 @@ const routes: RouteRecordRaw[] = [
     component: ProfilePage,
     meta: {
       requiresAuth: true,
-      title: 'Profile - SecureDocs'
-    }
+      title: 'Profile - SecureDocs',
+    },
   },
   {
     path: '/admin',
@@ -58,22 +59,22 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresRole: 'admin',
-      title: 'Admin Panel - SecureDocs'
-    }
+      title: 'Admin Panel - SecureDocs',
+    },
   },
   {
     path: '/unauthorized',
     name: 'Unauthorized',
     component: UnauthorizedPage,
     meta: {
-      title: 'Unauthorized - SecureDocs'
-    }
+      title: 'Unauthorized - SecureDocs',
+    },
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/dashboard'
-  }
+    redirect: '/dashboard',
+  },
 ]
 
 const router = createRouter({
@@ -81,27 +82,51 @@ const router = createRouter({
   routes,
 })
 
-// Global navigation guards
+// Global navigation guards with auth restoration
 router.beforeEach(async (to, from, next) => {
+  console.log(`🚀 Navigating from ${from.path} to ${to.path}`)
+
   const authStore = useAuthStore()
+  const { checkAuth } = useAuth()
 
   // Set page title
-  document.title = to.meta.title as string || 'SecureDocs'
+  document.title = (to.meta.title as string) || 'SecureDocs'
 
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
+    console.log('🔒 Route requires authentication, checking auth state...')
+
+    // If not authenticated, try to restore from localStorage/server
     if (!authStore.isAuthenticated) {
-      // Redirect to login with return path
-      return next({
-        path: '/login',
-        query: { redirect: to.fullPath }
-      })
+      console.log('❌ Not authenticated, attempting to restore auth...')
+
+      try {
+        // Try to restore authentication
+        const isAuthenticated = await checkAuth()
+
+        if (!isAuthenticated) {
+          console.log('❌ Auth restoration failed, redirecting to login')
+          return next({
+            path: '/login',
+            query: { redirect: to.fullPath },
+          })
+        }
+
+        console.log('✅ Auth restored successfully')
+      } catch (error) {
+        console.error('❌ Auth check failed:', error)
+        return next({
+          path: '/login',
+          query: { redirect: to.fullPath },
+        })
+      }
     }
 
     // Check if route requires specific role
     if (to.meta.requiresRole) {
       const requiredRole = to.meta.requiresRole as string
       if (!authStore.hasRole(requiredRole)) {
+        console.log(`❌ Role ${requiredRole} required but user has ${authStore.user?.role}`)
         return next('/unauthorized')
       }
     }
@@ -110,23 +135,41 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAnyRole) {
       const requiredRoles = to.meta.requiresAnyRole as string[]
       if (!authStore.hasAnyRole(requiredRoles)) {
+        console.log(
+          `❌ One of roles ${requiredRoles} required but user has ${authStore.user?.role}`,
+        )
         return next('/unauthorized')
       }
     }
   }
 
   // Check if route is for guests only (login, register)
-  if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    return next('/dashboard')
+  if (to.meta.requiresGuest) {
+    // Try to restore auth state first to check if user is actually logged in
+    if (!authStore.isAuthenticated) {
+      try {
+        const isAuthenticated = await checkAuth()
+        if (isAuthenticated) {
+          console.log('✅ User is authenticated, redirecting to dashboard')
+          return next('/dashboard')
+        }
+      } catch (error) {
+        // User is not authenticated, allow access to guest route
+        console.log('👤 User not authenticated, allowing guest route access')
+      }
+    } else {
+      console.log('✅ User already authenticated, redirecting to dashboard')
+      return next('/dashboard')
+    }
   }
 
+  console.log('✅ Navigation allowed')
   next()
 })
 
 // Global after navigation hooks for analytics, loading states, etc.
 router.afterEach((to, from) => {
-  // You can add analytics tracking here
-  // analytics.page(to.path)
+  console.log(`✅ Navigation completed: ${from.path} → ${to.path}`)
 
   // Scroll to top on route change
   window.scrollTo(0, 0)

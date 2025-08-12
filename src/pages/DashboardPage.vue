@@ -397,6 +397,65 @@
 </template>
 
 <script setup lang="ts">
+// Add this to the TOP of your DashboardPage.vue script section (before the existing imports)
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useAuth } from '@/composables/useAuth'
+
+// Add these lines after your existing useAuth destructuring
+const authStoreForCheck = useAuthStore()
+const routerForCheck = useRouter()
+const { checkAuth: checkAuthFunc } = useAuth()
+
+// Add this onMounted hook right after your existing reactive data declarations
+onMounted(async () => {
+  console.log('📊 Dashboard mounted - checking auth state...')
+  console.log('📊 Current auth state:', {
+    isAuthenticated: authStoreForCheck.isAuthenticated,
+    hasUser: !!authStoreForCheck.user,
+    hasToken: !!localStorage.getItem('access_token'),
+    userEmail: authStoreForCheck.user?.email,
+  })
+
+  // If no user data but we have a token, try to restore from server
+  const hasToken = localStorage.getItem('access_token')
+  if (hasToken && !authStoreForCheck.isAuthenticated) {
+    console.log('🔍 Have token but no user data, attempting to restore...')
+
+    try {
+      const isAuthenticated = await checkAuthFunc()
+
+      if (!isAuthenticated) {
+        console.log('❌ Authentication failed, redirecting to login')
+        routerForCheck.push({
+          name: 'Login',
+          query: { redirect: '/dashboard' },
+        })
+        return
+      }
+
+      console.log('✅ Authentication restored successfully')
+    } catch (error) {
+      console.error('❌ Auth check failed:', error)
+      routerForCheck.push({
+        name: 'Login',
+        query: { redirect: '/dashboard' },
+      })
+    }
+  } else if (!hasToken) {
+    console.log('❌ No token found, redirecting to login')
+    routerForCheck.push({
+      name: 'Login',
+      query: { redirect: '/dashboard' },
+    })
+  } else {
+    console.log('✅ User already authenticated:', authStoreForCheck.user?.email)
+  }
+})
+
+// Keep all your existing code below this...
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useDocsStore } from '@/stores/docs'
