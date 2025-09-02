@@ -137,12 +137,11 @@
         <!-- Submit Button -->
         <button
           type="submit"
-          class="submit-button"
           :disabled="isLoading || !isFormValid"
-          :class="{ loading: isLoading }"
+          class="register-button submit-button"
         >
-          <span v-if="isLoading" class="loading-spinner"></span>
-          {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+          <span v-if="isLoading" class="spinner"></span>
+          <span v-else>Sign Up</span>
         </button>
 
         <!-- Error Display -->
@@ -591,6 +590,33 @@ async function handleRegister() {
   justify-content: center;
   gap: 8px;
   margin-top: 8px;
+}
+
+.register-button {
+  /* ... existing styles ... */
+  position: relative;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Minimalistic Loading Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .submit-button:hover:not(:disabled) {

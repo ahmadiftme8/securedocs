@@ -1,129 +1,44 @@
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-header">
-        <h1>SecureDocs</h1>
-        <p>Sign in to your account</p>
+  <div class="login-container">
+    <h1>Login</h1>
+    <form @submit.prevent="handleSubmit" class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          v-model="credentials.email"
+          type="email"
+          placeholder="Enter your email"
+          required
+          :class="{ 'error-border': currentError && !credentials.email }"
+        />
       </div>
-
-      <form @submit.prevent="handleSubmit" class="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="credentials.email"
-            type="email"
-            required
-            :disabled="isLoading"
-            placeholder="Enter your email"
-            :class="{ 'error-input': currentError }"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="credentials.password"
-            type="password"
-            required
-            :disabled="isLoading"
-            placeholder="Enter your password"
-            :class="{ 'error-input': currentError }"
-          />
-        </div>
-
-        <!-- SINGLE Enhanced Error Display -->
-        <div class="form-error" v-if="currentError">
-          <div class="error-icon">⚠️</div>
-          <div class="error-content">
-            <div class="error-title">Login Failed</div>
-            <div class="error-message">{{ currentError }}</div>
-            <div class="error-suggestion" v-if="showSignupSuggestion">
-              Don't have an account?
-              <router-link to="/register" class="error-link">Sign up here</router-link>
-            </div>
-          </div>
-        </div>
-
-        <!-- Success Message -->
-        <div class="form-success" v-if="successMessage">
-          <div class="success-icon">✅</div>
-          <div class="success-message">{{ successMessage }}</div>
-        </div>
-
-        <button type="submit" class="login-button" :disabled="isLoading || !isFormValid">
-          <span v-if="isLoading" class="loading-spinner"></span>
-          {{ isLoading ? 'Signing in...' : 'Sign In' }}
-        </button>
-      </form>
-
-      <!-- Replace your debug section with this fixed version -->
-      <div
-        style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px"
-        v-if="isDevelopment"
-      >
-        <strong>Debug Info:</strong><br />
-        <code>currentError: "{{ currentError || 'null' }}"</code><br />
-        <code>loginError: "{{ loginError || 'null' }}"</code><br />
-        <code>authStore.error: "{{ authStore?.error || 'null' }}"</code><br />
-        <code>isLoading: {{ isLoading }}</code
-        ><br />
-        <code>Environment: {{ envMode }}</code
-        ><br />
-        <code>API URL: {{ apiUrl }}</code
-        ><br />
-
-        <!-- Test buttons -->
-        <div style="margin-top: 10px">
-          <button @click="testError" style="margin-right: 10px; padding: 5px">
-            Test Error Display
-          </button>
-          <button @click="clearError" style="padding: 5px">Clear Error</button>
-        </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          v-model="credentials.password"
+          type="password"
+          placeholder="Enter your password"
+          required
+          :class="{ 'error-border': currentError && !credentials.password }"
+        />
       </div>
-
-      <!-- Demo/Development only -->
-      <div class="demo-login" v-if="isDevelopment && enableMockLogin">
-        <p>Demo Login (Development Only):</p>
-        <div class="demo-buttons">
-          <button @click="handleDemoLogin('user')" :disabled="isLoading" class="demo-button user">
-            Login as User
-          </button>
-          <button @click="handleDemoLogin('admin')" :disabled="isLoading" class="demo-button admin">
-            Login as Admin
-          </button>
-        </div>
-        <p class="demo-note">These accounts will be created automatically if they don't exist.</p>
-      </div>
-
-      <!-- Test Accounts -->
-      <div class="test-accounts" v-if="isDevelopment">
-        <p>Test with real accounts:</p>
-        <div class="test-info">
-          <p><strong>1. Register a new account</strong> first, then login</p>
-          <p><strong>2. Or use existing credentials</strong></p>
-          <button @click="clearError" class="test-fill-button">Clear Error Message</button>
-        </div>
-      </div>
-
-      <div class="login-footer">
-        <p>
-          Don't have an account?
-          <router-link to="/register" class="signup-link">Sign up</router-link>
-        </p>
-        <p class="forgot-password">
-          <a href="#" @click.prevent="handleForgotPassword">Forgot your password?</a>
-        </p>
-      </div>
-
-      <!-- Connection Status -->
-      <div class="connection-status" v-if="isDevelopment">
-        <p :class="connectionStatus.class">
-          {{ connectionStatus.message }}
-        </p>
-      </div>
+      <button type="submit" :disabled="isLoading || !isFormValid" class="login-button">
+        <span v-if="isLoading" class="spinner"></span>
+        <span v-else>Login</span>
+      </button>
+      <p v-if="currentError" class="error-message">{{ currentError }}</p>
+      <p v-if="showSignupSuggestion" class="suggestion">
+        Don't have an account? <router-link to="/register">Sign up</router-link>
+      </p>
+      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+    </form>
+    <div v-if="isDevelopment && enableMockLogin" class="demo-login">
+      <button @click="handleDemoLogin('admin')" class="demo-button">Demo Admin Login</button>
+      <button @click="handleDemoLogin('user')" class="demo-button">Demo User Login</button>
     </div>
+    <p class="forgot-password" @click="handleForgotPassword">Forgot Password?</p>
   </div>
 </template>
 
@@ -153,30 +68,25 @@ const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
 
-// Use error from useAuth directly
 const currentError = computed(() => loginError.value)
 
 const showSignupSuggestion = computed(() => {
   return currentError.value && currentError.value.includes('Invalid login credentials')
 })
 
-// Clear error when typing
 watch([() => credentials.email, () => credentials.password], () => {
   if (currentError.value) {
     setTimeout(() => {
-      loginError.value = null // Clear directly in composable
+      loginError.value = null
     }, 2000)
   }
 })
 
 async function handleSubmit() {
   if (!isFormValid.value) return
-
   console.log('🔐 Attempting login for:', credentials.email)
   console.log('🌍 Environment:', envMode.value)
-
   successMessage.value = ''
-
   try {
     const success = await login(credentials)
     if (success) {
@@ -185,15 +95,10 @@ async function handleSubmit() {
       setTimeout(() => {
         const redirectPath = (route.query.redirect as string) || '/dashboard'
         router.push(redirectPath)
-      }, 1000)
-    } else {
-      console.log('❌ Login failed, error:', currentError.value)
+      }, 500)
     }
   } catch (error) {
-    console.error('❌ Login function threw error:', error)
-    if (!currentError.value) {
-      loginError.value = 'Login failed. Please try again.'
-    }
+    console.error('❌ Login error:', error)
   }
 }
 
@@ -407,6 +312,11 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+
+  position: relative;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 .login-button:hover:not(:disabled) {
@@ -427,6 +337,25 @@ onMounted(() => {
   border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+/* Minimalistic Loading Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .demo-login {
