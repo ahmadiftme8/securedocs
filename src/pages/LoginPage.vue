@@ -336,7 +336,7 @@ onMounted(() => {
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 3s linear infinite;
 }
 
 /* Minimalistic Loading Spinner */

@@ -608,7 +608,7 @@ async function handleRegister() {
   border: 2px solid #ccc;
   border-top: 2px solid #007bff;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 2s linear infinite;
   margin-right: 8px;
   vertical-align: middle;
 }
