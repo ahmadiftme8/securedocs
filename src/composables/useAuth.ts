@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/supabase' // Import client
+import { supabase } from '@/supabase'
 import { useAuthStore } from '@/stores/auth'
 import type { LoginCredentials, RegisterCredentials, User } from '@/types/auth'
 
@@ -14,15 +14,30 @@ export function useAuth() {
   async function login(credentials: LoginCredentials): Promise<boolean> {
     isLoading.value = true
     error.value = null
+
+    console.log('🔐 Starting login process for:', credentials.email)
+
     try {
       const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       })
-      if (supabaseError) throw supabaseError
-      authStore.setUser(data.user as User) // Set user in store
+
+      if (supabaseError) {
+        console.error('❌ Supabase login error:', supabaseError)
+        throw supabaseError
+      }
+
+      if (!data.user) {
+        throw new Error('No user data received')
+      }
+
+      console.log('✅ Login successful for user:', data.user.email)
+      authStore.setUser(data.user as User)
       return true
+
     } catch (err: any) {
+      console.error('❌ Login failed:', err)
       error.value = err.message || 'Login failed'
       return false
     } finally {
@@ -30,10 +45,13 @@ export function useAuth() {
     }
   }
 
-  // Register
+  // Register - FIXED: Removed auto-login
   async function registerUser(credentials: RegisterCredentials): Promise<boolean> {
     isLoading.value = true
     error.value = null
+
+    console.log('📝 Starting registration for:', credentials.email)
+
     try {
       const { data, error: supabaseError } = await supabase.auth.signUp({
         email: credentials.email,
@@ -41,15 +59,25 @@ export function useAuth() {
         options: {
           data: {
             name: credentials.name,
-            role: credentials.role, // Store role in metadata
+            role: credentials.role,
           },
+          // Add redirect URL for email confirmation
+          emailRedirectTo: `${window.location.origin}/dashboard`
         },
       })
-      if (supabaseError) throw supabaseError
-      // Auto-login after signup
-      await login({ email: credentials.email, password: credentials.password })
+
+      if (supabaseError) {
+        console.error('❌ Supabase registration error:', supabaseError)
+        throw supabaseError
+      }
+
+      console.log('✅ Registration successful. Please check email for confirmation.')
+
+      // Don't auto-login - let user confirm email first
       return true
+
     } catch (err: any) {
+      console.error('❌ Registration failed:', err)
       error.value = err.message || 'Registration failed'
       return false
     } finally {
@@ -59,6 +87,7 @@ export function useAuth() {
 
   // Logout
   async function logout(): Promise<void> {
+    console.log('👋 Logging out...')
     await supabase.auth.signOut()
     authStore.clearAuth()
     router.push('/login')
@@ -66,38 +95,91 @@ export function useAuth() {
 
   // Check auth (restore session)
   async function checkAuth(): Promise<boolean> {
-    const { data } = await supabase.auth.getSession()
-    if (data.session) {
-      authStore.setUser(data.session.user as User)
-      return true
+    try {
+      const { data, error } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error('❌ Session check error:', error)
+        return false
+      }
+
+      if (data.session?.user) {
+        console.log('✅ Session restored for:', data.session.user.email)
+        authStore.setUser(data.session.user as User)
+        return true
+      }
+
+      console.log('ℹ️ No active session found')
+      return false
+    } catch (err) {
+      console.error('❌ Auth check failed:', err)
+      return false
     }
-    return false
   }
 
   // Initialize auth listener
   function initializeAuth(): void {
-    supabase.auth.onAuthStateChange((_, session) => {
-      authStore.setUser((session?.user as User) ?? null)
+    console.log('🚀 Initializing auth listener...')
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email || 'no user')
+
+      if (session?.user) {
+        authStore.setUser(session.user as User)
+      } else {
+        authStore.clearAuth()
+      }
+
+      // Handle email confirmation
+      if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+        console.log('✅ Email confirmed and signed in')
+      }
     })
-    checkAuth() // Restore on load
+
+    // Restore session on load
+    checkAuth()
   }
 
-  // Mock login (for dev; remove in prod if not needed)
+  // Mock login - IMPROVED error handling
   async function mockLogin(role: 'admin' | 'user'): Promise<boolean> {
     const mockEmail = `${role}@securedocs.com`
     const mockPassword = 'Password123'
-    // Check if exists, else register
-    const { data } = await supabase.auth.signInWithPassword({
-      email: mockEmail,
-      password: mockPassword,
-    })
-    if (!data.user) {
-      await registerUser({ email: mockEmail, password: mockPassword, name: `${role} User`, role })
+
+    console.log(`🎭 Attempting mock login as ${role}`)
+
+    try {
+      // Try to login first
+      const loginSuccess = await login({ email: mockEmail, password: mockPassword })
+
+      if (loginSuccess) {
+        return true
+      }
+
+      // If login fails, try to register
+      console.log(`📝 Mock user doesn't exist, creating ${role} account...`)
+      const registerSuccess = await registerUser({
+        email: mockEmail,
+        password: mockPassword,
+        name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
+        role
+      })
+
+      if (registerSuccess) {
+        // After registration, user needs to confirm email
+        error.value = 'Mock account created. Please check email for confirmation.'
+        return false
+      }
+
+      return false
+
+    } catch (err: any) {
+      console.error('❌ Mock login error:', err)
+      error.value = err.message || 'Mock login failed'
+      return false
     }
-    return await login({ email: mockEmail, password: mockPassword })
   }
 
-  // Other utils (adapted)
+  // Computed properties
   const user = computed(() => authStore.user)
   const hasRole = (role: string) => user.value?.user_metadata?.role === role
   const hasAnyRole = (roles: string[]) => roles.some((r) => hasRole(r))
@@ -112,7 +194,7 @@ export function useAuth() {
     mockLogin,
     user,
     isLoading,
-    error: computed(() => error.value), // Expose as computed for reactivity
+    error: computed(() => error.value),
     hasRole,
     hasAnyRole,
     hasPermission,

@@ -1,44 +1,86 @@
 <template>
-  <div class="login-container">
-    <h1>Login</h1>
-    <form @submit.prevent="handleSubmit" class="login-form">
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          v-model="credentials.email"
-          type="email"
-          placeholder="Enter your email"
-          required
-          :class="{ 'error-border': currentError && !credentials.email }"
-        />
+  <div class="login-page">
+    <div class="login-container">
+      <div class="login-header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to your account</p>
       </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          v-model="credentials.password"
-          type="password"
-          placeholder="Enter your password"
-          required
-          :class="{ 'error-border': currentError && !credentials.password }"
-        />
+
+      <!-- Error Message -->
+      <div v-if="currentError" class="form-error">
+        <span class="error-icon">⚠️</span>
+        <div class="error-content">
+          <div class="error-title">Login Failed</div>
+          <div class="error-message">{{ currentError }}</div>
+          <div v-if="showSignupSuggestion" class="error-suggestion">
+            Don't have an account? <router-link to="/register" class="error-link">Create one here</router-link>
+          </div>
+        </div>
       </div>
-      <button type="submit" :disabled="isLoading || !isFormValid" class="login-button">
-        <span v-if="isLoading" class="spinner"></span>
-        <span v-else>Login</span>
-      </button>
-      <p v-if="currentError" class="error-message">{{ currentError }}</p>
-      <p v-if="showSignupSuggestion" class="suggestion">
-        Don't have an account? <router-link to="/register">Sign up</router-link>
-      </p>
-      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
-    </form>
-    <div v-if="isDevelopment && enableMockLogin" class="demo-login">
-      <button @click="handleDemoLogin('admin')" class="demo-button">Demo Admin Login</button>
-      <button @click="handleDemoLogin('user')" class="demo-button">Demo User Login</button>
+
+      <!-- Success Message -->
+      <div v-if="successMessage" class="form-success">
+        <span class="success-icon">✅</span>
+        <div class="success-message">{{ successMessage }}</div>
+      </div>
+
+      <form @submit.prevent="handleSubmit" class="login-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input
+            id="email"
+            v-model="credentials.email"
+            type="email"
+            placeholder="Enter your email"
+            required
+            :disabled="isLoading"
+            :class="{ 'error-input': currentError && !credentials.email }"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            v-model="credentials.password"
+            type="password"
+            placeholder="Enter your password"
+            required
+            :disabled="isLoading"
+            :class="{ 'error-input': currentError && !credentials.password }"
+          />
+        </div>
+
+        <button type="submit" :disabled="isLoading || !isFormValid" class="login-button">
+          <span v-if="isLoading" class="loading-spinner"></span>
+          <span v-else>Sign In</span>
+        </button>
+      </form>
+
+      <!-- Demo Login (Development Only) -->
+      <div v-if="isDevelopment && enableMockLogin" class="demo-login">
+        <p>Development Demo Accounts:</p>
+        <div class="demo-buttons">
+          <button @click="handleDemoLogin('admin')" :disabled="isLoading" class="demo-button admin">
+            Demo Admin
+          </button>
+          <button @click="handleDemoLogin('user')" :disabled="isLoading" class="demo-button user">
+            Demo User
+          </button>
+        </div>
+        <p class="demo-note">These accounts are for development testing only.</p>
+      </div>
+
+      <div class="login-footer">
+        <p class="forgot-password">
+          <a href="#" @click.prevent="handleForgotPassword">Forgot your password?</a>
+        </p>
+        <p>
+          Don't have an account?
+          <router-link to="/register" class="signup-link">Sign up</router-link>
+        </p>
+      </div>
     </div>
-    <p class="forgot-password" @click="handleForgotPassword">Forgot Password?</p>
   </div>
 </template>
 
@@ -65,37 +107,53 @@ const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN ==
 const envMode = computed(() => import.meta.env.MODE)
 
 const isFormValid = computed(() => {
-  return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
+  return credentials.email.trim() &&
+         credentials.password.trim() &&
+         credentials.email.includes('@') &&
+         credentials.email.length > 3
 })
 
 const currentError = computed(() => loginError.value)
 
 const showSignupSuggestion = computed(() => {
-  return currentError.value && currentError.value.includes('Invalid login credentials')
+  return currentError.value &&
+         (currentError.value.includes('Invalid login credentials') ||
+          currentError.value.includes('Email not confirmed'))
 })
 
+// Clear error when user types
 watch([() => credentials.email, () => credentials.password], () => {
   if (currentError.value) {
+    successMessage.value = ''
+    // Clear error after a delay to avoid jarring UX
     setTimeout(() => {
-      loginError.value = null
+      if (loginError.value) {
+        loginError.value = null
+      }
     }, 2000)
   }
 })
 
 async function handleSubmit() {
-  if (!isFormValid.value) return
+  if (!isFormValid.value || isLoading.value) return
+
   console.log('🔐 Attempting login for:', credentials.email)
   console.log('🌍 Environment:', envMode.value)
+
   successMessage.value = ''
+
   try {
     const success = await login(credentials)
+
     if (success) {
       successMessage.value = 'Login successful! Redirecting...'
       console.log('✅ Login successful, redirecting...')
+
+      // Small delay for UX
       setTimeout(() => {
         const redirectPath = (route.query.redirect as string) || '/dashboard'
         router.push(redirectPath)
-      }, 500)
+      }, 1000)
     }
   } catch (error) {
     console.error('❌ Login error:', error)
@@ -103,8 +161,12 @@ async function handleSubmit() {
 }
 
 async function handleDemoLogin(role: 'admin' | 'user') {
+  if (isLoading.value) return
+
   try {
+    console.log(`🎭 Demo login as ${role}`)
     const success = await mockLogin(role)
+
     if (success) {
       console.log(`✅ Demo login as ${role} successful`)
       const redirectPath = (route.query.redirect as string) || '/dashboard'
@@ -112,29 +174,26 @@ async function handleDemoLogin(role: 'admin' | 'user') {
     }
   } catch (error) {
     console.error('❌ Demo login error:', error)
-    loginError.value = 'Demo login failed. Please try again.'
   }
 }
 
-function clearError() {
-  loginError.value = null
-  successMessage.value = ''
-  console.log('🧹 Error cleared')
-}
-
-function testError() {
-  loginError.value = 'Test error message - Invalid login credentials'
-  console.log('🧪 Test error set:', loginError.value)
-}
-
 function handleForgotPassword() {
-  alert('Password reset functionality would be implemented with Supabase Auth')
+  // TODO: Implement password reset with Supabase
+  alert('Password reset functionality will be implemented with Supabase Auth')
 }
 
 onMounted(() => {
+  // Focus email input on mount
   const emailInput = document.getElementById('email')
   if (emailInput) {
     emailInput.focus()
+  }
+
+  // Check for URL hash errors (email confirmation)
+  const hash = window.location.hash
+  if (hash.includes('error=access_denied')) {
+    console.warn('⚠️ Email confirmation error detected in URL')
+    loginError.value = 'Email confirmation link has expired. Please request a new one.'
   }
 })
 </script>
@@ -146,18 +205,17 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  width: 100%;
-  background: #eeaeca;
-  background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .login-container {
-  background: #ffffff;
-  border-radius: 12px;
+  background: white;
+  border-radius: 16px;
   padding: 40px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   max-width: 450px;
   width: 100%;
+  animation: slideUp 0.5s ease-out;
 }
 
 .login-header {
@@ -175,52 +233,12 @@ onMounted(() => {
 .login-header p {
   color: #666;
   margin: 0;
-}
-
-.login-form {
-  margin-bottom: 30px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
   font-size: 16px;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.form-group input.error-input {
-  border-color: #dc3545;
-  background-color: #fdf2f2;
-}
-
-.form-group input:disabled {
-  background-color: #f8f9fa;
-  cursor: not-allowed;
-}
-
-/* Enhanced Error Styling */
 .form-error {
-  background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-  border: 1px solid #faa;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -231,9 +249,9 @@ onMounted(() => {
 }
 
 .error-icon {
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .error-content {
@@ -242,22 +260,22 @@ onMounted(() => {
 
 .error-title {
   font-weight: 600;
-  color: #c33;
+  color: #dc2626;
   font-size: 14px;
   margin-bottom: 4px;
 }
 
 .error-message {
-  color: #c33;
+  color: #dc2626;
   font-size: 14px;
   margin-bottom: 8px;
   line-height: 1.4;
 }
 
 .error-suggestion {
+  background: #fff3cd;
   color: #856404;
   font-size: 13px;
-  background: #fff3cd;
   padding: 8px 12px;
   border-radius: 6px;
   margin-top: 8px;
@@ -273,10 +291,9 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-/* Success Message */
 .form-success {
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-  border: 1px solid #9ac49a;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #a7f3d0;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -287,14 +304,58 @@ onMounted(() => {
 }
 
 .success-icon {
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
 .success-message {
-  color: #155724;
+  color: #065f46;
   font-size: 14px;
   font-weight: 500;
+}
+
+.login-form {
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background: white;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input.error-input {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.form-group input:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .login-button {
@@ -312,22 +373,20 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-
-  position: relative;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
+  min-height: 48px;
 }
 
 .login-button:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .login-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .loading-spinner {
@@ -336,30 +395,11 @@ onMounted(() => {
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
-  animation: spin 3s linear infinite;
-}
-
-/* Minimalistic Loading Spinner */
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ccc;
-  border-top: 2px solid #007bff;
-  border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .demo-login {
-  border-top: 1px solid #eee;
+  border-top: 1px solid #e5e7eb;
   padding-top: 20px;
   margin-bottom: 20px;
 }
@@ -368,19 +408,12 @@ onMounted(() => {
   text-align: center;
   margin-bottom: 15px;
   font-size: 14px;
-  color: #666;
-}
-
-.demo-note {
-  font-size: 12px !important;
-  color: #999 !important;
-  font-style: italic;
-  margin-top: 10px !important;
+  color: #6b7280;
 }
 
 .demo-buttons {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .demo-button {
@@ -389,29 +422,29 @@ onMounted(() => {
   border: 2px solid;
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.demo-button.user {
-  border-color: #28a745;
-  color: #28a745;
   background: white;
-}
-
-.demo-button.user:hover:not(:disabled) {
-  background: #28a745;
-  color: white;
 }
 
 .demo-button.admin {
-  border-color: #dc3545;
-  color: #dc3545;
-  background: white;
+  border-color: #dc2626;
+  color: #dc2626;
 }
 
 .demo-button.admin:hover:not(:disabled) {
-  background: #dc3545;
+  background: #dc2626;
+  color: white;
+}
+
+.demo-button.user {
+  border-color: #059669;
+  color: #059669;
+}
+
+.demo-button.user:hover:not(:disabled) {
+  background: #059669;
   color: white;
 }
 
@@ -420,114 +453,59 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.test-accounts {
-  border-top: 1px solid #eee;
-  padding-top: 20px;
-  margin-bottom: 20px;
-}
-
-.test-accounts p {
-  text-align: center;
-  margin-bottom: 15px;
-  font-size: 14px;
-  color: #666;
-}
-
-.test-info {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-
-.test-fill-button {
-  background: #17a2b8;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+.demo-note {
   font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
   margin-top: 10px;
-}
-
-.test-fill-button:hover {
-  background: #138496;
 }
 
 .login-footer {
   text-align: center;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 20px;
 }
 
 .login-footer p {
-  color: #666;
+  color: #6b7280;
   margin: 8px 0;
   font-size: 14px;
+}
+
+.forgot-password a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
 }
 
 .signup-link {
   color: #667eea;
   text-decoration: none;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.2s;
 }
 
 .signup-link:hover {
-  background: #f0f8ff;
+  background: rgba(102, 126, 234, 0.1);
   text-decoration: underline;
-}
-
-.login-footer a {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.login-footer a:hover {
-  text-decoration: underline;
-}
-
-.forgot-password {
-  margin-top: 15px !important;
-}
-
-.connection-status {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 12px;
-  padding: 8px;
-  border-radius: 4px;
-}
-
-.status-checking {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.status-connected {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status-disconnected {
-  background: #f8d7da;
-  color: #721c24;
 }
 
 /* Animations */
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
   }
-  25% {
-    transform: translateX(-5px);
-  }
-  75% {
-    transform: translateX(5px);
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -542,21 +520,32 @@ onMounted(() => {
   }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* Responsive */
 @media (max-width: 480px) {
+  .login-page {
+    padding: 15px;
+  }
+
   .login-container {
-    padding: 24px;
-    margin: 10px;
+    padding: 30px 24px;
   }
 
   .login-header h1 {
     font-size: 24px;
+  }
+
+  .demo-buttons {
+    flex-direction: column;
   }
 }
 </style>
