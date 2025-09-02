@@ -1,4 +1,3 @@
-// src/router/index.ts - Fixed with auth restoration
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAuth } from '@/composables/useAuth'
@@ -82,7 +81,7 @@ const router = createRouter({
   routes,
 })
 
-// Global navigation guards with auth restoration
+// Global navigation guards
 router.beforeEach(async (to, from, next) => {
   console.log(`🚀 Navigating from ${from.path} to ${to.path}`)
 
@@ -93,86 +92,50 @@ router.beforeEach(async (to, from, next) => {
   document.title = (to.meta.title as string) || 'SecureDocs'
 
   // Check if route requires authentication
-  if (to.meta.requiresAuth) {
-    console.log('🔒 Route requires authentication, checking auth state...')
-
-    // If not authenticated, try to restore from localStorage/server
-    if (!authStore.isAuthenticated) {
-      console.log('❌ Not authenticated, attempting to restore auth...')
-
-      try {
-        // Try to restore authentication
-        const isAuthenticated = await checkAuth()
-
-        if (!isAuthenticated) {
-          console.log('❌ Auth restoration failed, redirecting to login')
-          return next({
-            path: '/login',
-            query: { redirect: to.fullPath },
-          })
-        }
-
-        console.log('✅ Auth restored successfully')
-      } catch (error) {
-        console.error('❌ Auth check failed:', error)
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    try {
+      const isAuthenticated = await checkAuth()
+      if (!isAuthenticated) {
+        console.log('❌ Not authenticated, redirecting to login')
         return next({
           path: '/login',
-          query: { redirect: to.fullPath },
+          query: { redirect: to.fullPath }, // Preserve intended route
         })
       }
+    } catch (error) {
+      console.error('❌ Auth check failed:', error)
+      return next({
+        path: '/login',
+        query: { redirect: to.fullPath },
+      })
     }
+  }
 
-    // Check if route requires specific role
-    if (to.meta.requiresRole) {
-      const requiredRole = to.meta.requiresRole as string
-      if (!authStore.hasRole(requiredRole)) {
-        console.log(`❌ Role ${requiredRole} required but user has ${authStore.user?.role}`)
-        return next('/unauthorized')
-      }
-    }
-
-    // Check if route requires any of multiple roles
-    if (to.meta.requiresAnyRole) {
-      const requiredRoles = to.meta.requiresAnyRole as string[]
-      if (!authStore.hasAnyRole(requiredRoles)) {
-        console.log(
-          `❌ One of roles ${requiredRoles} required but user has ${authStore.user?.role}`,
-        )
-        return next('/unauthorized')
-      }
+  // Check role for protected routes
+  if (to.meta.requiresRole) {
+    const requiredRole = to.meta.requiresRole as string
+    if (!authStore.hasRole(requiredRole)) {
+      console.log(
+        `❌ Role ${requiredRole} required but user has ${authStore.user?.user_metadata?.role || 'none'}`,
+      )
+      return next('/unauthorized')
     }
   }
 
   // Check if route is for guests only (login, register)
-  if (to.meta.requiresGuest) {
-    // Try to restore auth state first to check if user is actually logged in
-    if (!authStore.isAuthenticated) {
-      try {
-        const isAuthenticated = await checkAuth()
-        if (isAuthenticated) {
-          console.log('✅ User is authenticated, redirecting to dashboard')
-          return next('/dashboard')
-        }
-      } catch (error) {
-        // User is not authenticated, allow access to guest route
-        console.log('👤 User not authenticated, allowing guest route access')
-      }
-    } else {
-      console.log('✅ User already authenticated, redirecting to dashboard')
-      return next('/dashboard')
-    }
+  if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    console.log('✅ User already authenticated, redirecting to dashboard')
+    return next('/dashboard')
   }
 
   console.log('✅ Navigation allowed')
   next()
 })
 
-// Global after navigation hooks for analytics, loading states, etc.
+// Global after navigation hooks
 router.afterEach((to, from) => {
   console.log(`✅ Navigation completed: ${from.path} → ${to.path}`)
-
-  // Scroll to top on route change
-  window.scrollTo(0, 0)
+  window.scrollTo(0, 0) // Scroll to top
 })
 
 export { router }
@@ -183,7 +146,6 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     requiresGuest?: boolean
     requiresRole?: string
-    requiresAnyRole?: string[]
     title?: string
     description?: string
   }

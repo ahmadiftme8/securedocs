@@ -132,12 +132,10 @@ import { reactive, computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import type { LoginCredentials } from '@/types/auth'
-import { useAuthStore } from '@/stores/auth'
 
-const { login, mockLogin, loginError, isLoading } = useAuth()
+const { login, mockLogin, error: loginError, isLoading } = useAuth()
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 
 const credentials = reactive<LoginCredentials>({
   email: '',
@@ -145,167 +143,93 @@ const credentials = reactive<LoginCredentials>({
 })
 
 const successMessage = ref('')
-const connectionStatus = ref({
-  class: 'status-checking',
-  message: 'Checking server connection...',
-})
 
-// Fixed computed properties for template
+// Computed properties
 const isDevelopment = computed(() => import.meta.env.DEV)
 const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN === 'true')
 const envMode = computed(() => import.meta.env.MODE)
-const apiUrl = computed(() => import.meta.env.VITE_AUTH_API_URL)
 
 const isFormValid = computed(() => {
   return credentials.email.trim() && credentials.password.trim() && credentials.email.includes('@')
 })
 
-// Safe error handling - combine both sources
-const currentError = computed(() => {
-  // Safely access loginError and authStore.error
-  const authError = loginError?.value || null
-  const storeError = authStore?.error || null
+// Use error from useAuth directly
+const currentError = computed(() => loginError.value)
 
-  return authError || storeError || null
-})
-
-// Show signup suggestion for "Invalid email or password" errors
 const showSignupSuggestion = computed(() => {
-  return currentError.value && currentError.value.includes('Invalid email or password')
+  return currentError.value && currentError.value.includes('Invalid login credentials')
 })
 
-// Watch for error changes
-watch(currentError, (newError) => {
-  if (newError) {
-    console.log('🚨 Error detected:', newError)
-    successMessage.value = ''
-  }
-})
-
-// Clear error when user starts typing
+// Clear error when typing
 watch([() => credentials.email, () => credentials.password], () => {
   if (currentError.value) {
     setTimeout(() => {
-      clearError()
+      loginError.value = null // Clear directly in composable
     }, 2000)
   }
 })
 
 async function handleSubmit() {
-  if (!isFormValid.value) {
-    return
-  }
+  if (!isFormValid.value) return
 
   console.log('🔐 Attempting login for:', credentials.email)
   console.log('🌍 Environment:', envMode.value)
-  console.log('🔗 API Base URL:', apiUrl.value)
 
-  // Clear previous messages
   successMessage.value = ''
 
   try {
     const success = await login(credentials)
-
     if (success) {
       successMessage.value = 'Login successful! Redirecting...'
       console.log('✅ Login successful, redirecting...')
-
       setTimeout(() => {
         const redirectPath = (route.query.redirect as string) || '/dashboard'
         router.push(redirectPath)
       }, 1000)
     } else {
-      console.log('❌ Login failed, error should be displayed')
-      console.log('❌ loginError:', loginError?.value)
-      console.log('❌ authStore.error:', authStore?.error)
-      console.log('❌ currentError:', currentError.value)
+      console.log('❌ Login failed, error:', currentError.value)
     }
   } catch (error) {
     console.error('❌ Login function threw error:', error)
-    // Fallback error handling
     if (!currentError.value) {
-      authStore.setError('Login failed. Please try again.')
+      loginError.value = 'Login failed. Please try again.'
     }
   }
 }
 
 async function handleDemoLogin(role: 'admin' | 'user') {
   try {
-    const demoCredentials = {
-      email: `${role}@securedocs.com`,
-      password: 'DemoPassword123',
-    }
-
-    const success = await login(demoCredentials)
-
+    const success = await mockLogin(role)
     if (success) {
+      console.log(`✅ Demo login as ${role} successful`)
       const redirectPath = (route.query.redirect as string) || '/dashboard'
       router.push(redirectPath)
     }
   } catch (error) {
-    console.error('Demo login error:', error)
+    console.error('❌ Demo login error:', error)
+    loginError.value = 'Demo login failed. Please try again.'
   }
 }
 
 function clearError() {
-  try {
-    if (authStore?.clearError) {
-      authStore.clearError()
-    }
-    successMessage.value = ''
-    console.log('🧹 Error cleared')
-  } catch (error) {
-    console.error('Error clearing error:', error)
-  }
+  loginError.value = null
+  successMessage.value = ''
+  console.log('🧹 Error cleared')
 }
 
 function testError() {
-  try {
-    authStore.setError('Test error message - Invalid email or password')
-    console.log('🧪 Test error set:', authStore.error)
-  } catch (error) {
-    console.error('Error setting test error:', error)
-  }
+  loginError.value = 'Test error message - Invalid login credentials'
+  console.log('🧪 Test error set:', loginError.value)
 }
 
 function handleForgotPassword() {
-  alert('Password reset functionality would be implemented here')
+  alert('Password reset functionality would be implemented with Supabase Auth')
 }
 
-async function checkServerConnection() {
-  try {
-    const response = await fetch('/.netlify/functions/auth-login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: 'test@test.com',
-        password: 'test',
-      }),
-    })
-
-    connectionStatus.value = {
-      class: 'status-connected',
-      message: '✅ Connected to authentication server',
-    }
-  } catch (error) {
-    connectionStatus.value = {
-      class: 'status-disconnected',
-      message: '❌ Cannot connect to authentication server',
-    }
-    console.error('Server connection check failed:', error)
-  }
-}
-
-onMounted(async () => {
+onMounted(() => {
   const emailInput = document.getElementById('email')
   if (emailInput) {
     emailInput.focus()
-  }
-
-  if (isDevelopment.value) {
-    await checkServerConnection()
   }
 })
 </script>

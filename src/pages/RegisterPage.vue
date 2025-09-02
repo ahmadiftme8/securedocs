@@ -173,7 +173,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import type { RegisterCredentials } from '@/types/auth'
 
-const { registerUser, isLoading } = useAuth()
+const { registerUser, isLoading, error: registerError } = useAuth()
 const router = useRouter()
 
 // Form data
@@ -204,7 +204,7 @@ const errors = reactive({
 const generalError = ref('')
 const successMessage = ref('')
 
-// Password strength calculation
+// Password strength calculation (unchanged)
 const passwordStrength = computed(() => {
   const password = formData.password
   if (!password) return { percentage: 0, text: '', class: '' }
@@ -212,19 +212,15 @@ const passwordStrength = computed(() => {
   let score = 0
   const feedback = []
 
-  // Length check
   if (password.length >= 8) score += 25
   else feedback.push('at least 8 characters')
 
-  // Uppercase check
   if (/[A-Z]/.test(password)) score += 25
   else feedback.push('uppercase letter')
 
-  // Lowercase check
   if (/[a-z]/.test(password)) score += 25
   else feedback.push('lowercase letter')
 
-  // Number or special character check
   if (/[0-9]/.test(password) || /[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 25
   else feedback.push('number or special character')
 
@@ -248,7 +244,7 @@ const passwordStrength = computed(() => {
   return { percentage: score, text, class: className }
 })
 
-// Form validation
+// Form validation (unchanged)
 const isFormValid = computed(() => {
   return (
     formData.name.trim() &&
@@ -261,7 +257,6 @@ const isFormValid = computed(() => {
   )
 })
 
-// Validation functions
 function validateName() {
   if (!formData.name.trim()) {
     errors.name = 'Name is required'
@@ -321,7 +316,6 @@ function validateTerms() {
   }
 }
 
-// Role description helper
 function getRoleDescription(role: string): string {
   switch (role) {
     case 'user':
@@ -333,7 +327,7 @@ function getRoleDescription(role: string): string {
   }
 }
 
-// Watch for form changes and validate
+// Watch for form changes (unchanged)
 watch(() => formData.name, validateName)
 watch(() => formData.email, validateEmail)
 watch(
@@ -349,11 +343,9 @@ watch(() => formData.agreeToTerms, validateTerms)
 
 // Form submission
 async function handleRegister() {
-  // Clear previous messages
   generalError.value = ''
   successMessage.value = ''
 
-  // Validate all fields
   validateName()
   validateEmail()
   validatePassword()
@@ -361,7 +353,6 @@ async function handleRegister() {
   validateRole()
   validateTerms()
 
-  // Check if form is valid
   if (!isFormValid.value) {
     generalError.value = 'Please fix the errors above'
     return
@@ -377,15 +368,15 @@ async function handleRegister() {
 
     if (success) {
       successMessage.value = 'Account created successfully! Redirecting to dashboard...'
-
-      // Redirect after a short delay to show success message
       setTimeout(() => {
         router.push('/dashboard')
       }, 1500)
+    } else {
+      generalError.value = registerError.value || 'Registration failed. Please try again.'
     }
   } catch (error) {
     console.error('Registration error:', error)
-    generalError.value = 'Registration failed. Please try again.'
+    generalError.value = registerError.value || 'Registration failed. Please try again.'
   }
 }
 </script>

@@ -1,248 +1,78 @@
-// src/stores/auth.ts - Fixed with missing methods
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User } from '@/types/auth'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
+
+export type User = SupabaseUser & {
+  // Extend with your custom fields
+  user_metadata: { name?: string; role?: 'admin' | 'user' }
+}
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const lastActivity = ref<Date | null>(null)
 
   // Getters
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isUser = computed(() => user.value?.role === 'user')
-  const userName = computed(() => user.value?.name || 'User')
-  const userInitials = computed(() => {
-    if (!user.value?.name) return 'U'
-    return user.value.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  })
-
-  // Session management
-  const isSessionExpired = computed(() => {
-    if (!lastActivity.value) return false
-    const now = new Date()
-    const timeDiff = now.getTime() - lastActivity.value.getTime()
-    const sessionTimeout = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-    return timeDiff > sessionTimeout
-  })
+  const isAdmin = computed(() => user.value?.user_metadata?.role === 'admin')
+  const isUser = computed(() => user.value?.user_metadata?.role === 'user')
+  const userName = computed(() => user.value?.user_metadata?.name || 'User')
 
   // Actions
-  function setUser(userData: User) {
+  function setUser(userData: User | null) {
     user.value = userData
     error.value = null
-    lastActivity.value = new Date()
-
-    // Persist user data (except sensitive tokens)
-    const userDataToStore = {
-      id: userData.id,
-      email: userData.email,
-      role: userData.role,
-      name: userData.name,
-      avatar: userData.avatar,
-      createdAt: userData.createdAt,
-      lastLoginAt: userData.lastLoginAt,
-    }
-
-    localStorage.setItem('user', JSON.stringify(userDataToStore))
-    localStorage.setItem('lastActivity', new Date().toISOString())
-  }
-
-  function updateUser(updates: Partial<User>) {
-    if (user.value) {
-      user.value = { ...user.value, ...updates }
-
-      // Update localStorage
-      const userDataToStore = {
-        id: user.value.id,
-        email: user.value.email,
-        role: user.value.role,
-        name: user.value.name,
-        avatar: user.value.avatar,
-        createdAt: user.value.createdAt,
-        lastLoginAt: user.value.lastLoginAt,
-      }
-
-      localStorage.setItem('user', JSON.stringify(userDataToStore))
-    }
-  }
-
-  // MISSING METHODS - These were causing the errors!
-  function setLoading(loading: boolean) {
-    isLoading.value = loading
-  }
-
-  function setError(errorMessage: string | null) {
-    error.value = errorMessage
-  }
-
-  function clearError() {
-    error.value = null
-  }
-
-  function updateActivity() {
-    lastActivity.value = new Date()
-    localStorage.setItem('lastActivity', new Date().toISOString())
   }
 
   function clearAuth() {
     user.value = null
     error.value = null
     isLoading.value = false
-    lastActivity.value = null
-
-    // Clear all persisted auth data
-    localStorage.removeItem('user')
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('lastActivity')
-
-    // Clear any other app-specific data
-    localStorage.removeItem('preferences')
-    localStorage.removeItem('recent_files')
   }
 
-  // Initialize from localStorage on app start
-  function initializeAuth() {
-    try {
-      const storedUser = localStorage.getItem('user')
-      const accessToken = localStorage.getItem('access_token')
-      const storedActivity = localStorage.getItem('lastActivity')
-
-      if (storedUser && accessToken) {
-        const userData = JSON.parse(storedUser)
-        const activityDate = storedActivity ? new Date(storedActivity) : new Date()
-
-        // Check if session is still valid
-        const now = new Date()
-        const timeDiff = now.getTime() - activityDate.getTime()
-        const sessionTimeout = 24 * 60 * 60 * 1000 // 24 hours
-
-        if (timeDiff <= sessionTimeout) {
-          user.value = userData
-          lastActivity.value = activityDate
-
-          // Update last activity to current time
-          updateActivity()
-        } else {
-          // Session expired, clear auth
-          clearAuth()
-        }
-      }
-    } catch (error) {
-      console.error('Failed to initialize auth from storage:', error)
-      clearAuth()
-    }
+  function setError(errorMessage: string | null) {
+    error.value = errorMessage
   }
 
-  // Role and permission checking
   function hasRole(role: string): boolean {
-    return user.value?.role === role
+    return user.value?.user_metadata?.role === role
   }
 
   function hasAnyRole(roles: string[]): boolean {
-    return roles.some((role) => user.value?.role === role)
+    return roles.some((role) => hasRole(role))
   }
 
-  function canAccessAdminPanel(): boolean {
-    return user.value?.role === 'admin'
-  }
-
-  function canManageUsers(): boolean {
-    return user.value?.role === 'admin'
-  }
-
-  function canUploadFiles(): boolean {
-    return isAuthenticated.value
-  }
-
-  function canDeleteFile(fileOwnerId?: string): boolean {
-    if (!user.value) return false
-    if (user.value.role === 'admin') return true
-    return user.value.id === fileOwnerId
-  }
-
-  // Account status checks
-  function isAccountActive(): boolean {
-    return !!user.value && !isSessionExpired.value
-  }
-
-  function needsReauthentication(): boolean {
-    return isAuthenticated.value && isSessionExpired.value
-  }
-
-  // User preferences (example of additional functionality)
-  function getUserPreferences() {
-    try {
-      const prefs = localStorage.getItem('preferences')
-      return prefs
-        ? JSON.parse(prefs)
-        : {
-            theme: 'light',
-            language: 'en',
-            notifications: true,
-            autoSave: true,
-          }
-    } catch {
-      return {
-        theme: 'light',
-        language: 'en',
-        notifications: true,
-        autoSave: true,
-      }
+  // Permissions (adapt as needed)
+  function getUserPermissions(): string[] {
+    const role = user.value?.user_metadata?.role
+    if (!role) return []
+    const permissions: Record<string, string[]> = {
+      admin: [
+        'read:files',
+        'write:files',
+        'delete:files',
+        'manage:users',
+        'manage:settings',
+        'view:analytics',
+      ],
+      user: ['read:files', 'write:files', 'delete:own-files'],
     }
-  }
-
-  function setUserPreferences(preferences: Record<string, any>) {
-    localStorage.setItem('preferences', JSON.stringify(preferences))
+    return permissions[role] || []
   }
 
   return {
-    // State
     user,
     isLoading,
     error,
-    lastActivity,
-
-    // Getters
     isAuthenticated,
     isAdmin,
     isUser,
     userName,
-    userInitials,
-    isSessionExpired,
-
-    // Actions
     setUser,
-    updateUser,
-    setLoading, // ← This was missing!
-    setError, // ← This was missing!
-    clearError, // ← This was missing!
-    updateActivity,
     clearAuth,
-    initializeAuth,
-
-    // Role checking
+    setError,
     hasRole,
     hasAnyRole,
-    canAccessAdminPanel,
-    canManageUsers,
-    canUploadFiles,
-    canDeleteFile,
-
-    // Account status
-    isAccountActive,
-    needsReauthentication,
-
-    // Preferences
-    getUserPreferences,
-    setUserPreferences,
+    getUserPermissions,
   }
 })

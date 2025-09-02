@@ -1,8 +1,8 @@
-// src/main.ts - Enhanced with proper auth initialization
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
+import { useAuth } from './composables/useAuth'
 import '@/assets/main.css'
 
 async function initApp() {
@@ -11,22 +11,20 @@ async function initApp() {
   const app = createApp(App)
   const pinia = createPinia()
 
-  // Initialize Pinia first
+  // Initialize Pinia
   app.use(pinia)
 
-  // Now we can use stores
+  // Initialize auth with Supabase
+  const { initializeAuth } = useAuth()
+  await initializeAuth() // Sets up auth listener and restores session
+
+  // Log auth state for debugging
   const { useAuthStore } = await import('@/stores/auth')
   const authStore = useAuthStore()
-
-  console.log('🔍 Initializing auth store from localStorage...')
-
-  // Initialize auth store from localStorage
-  authStore.initializeAuth()
-
   console.log('📊 Initial auth state:', {
     isAuthenticated: authStore.isAuthenticated,
     hasUser: !!authStore.user,
-    hasToken: !!localStorage.getItem('access_token'),
+    userRole: authStore.user?.user_metadata?.role || 'none',
   })
 
   // Mount router
