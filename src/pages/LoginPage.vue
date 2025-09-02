@@ -2,8 +2,9 @@
   <div class="login-page">
     <div class="login-container">
       <div class="login-header">
-        <h1>Welcome Back</h1>
-        <p>Sign in to your account</p>
+        <h1 class="welcome-text">Welcome Back To</h1>
+        <h2 class="brand-name">Fylor</h2>
+        <p class="subtitle">Sign In To Your Account</p>
       </div>
 
       <!-- Error Message -->
@@ -199,57 +200,78 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Poppins:wght@300;400;500;600;700&family=Kalam:wght@300;400;700&display=swap');
+
 .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #F4E6CF; /* Champagne background */
+  font-family: 'Poppins', sans-serif;
 }
 
 .login-container {
-  background: white;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  max-width: 450px;
+
+  border-radius: 24px;
+  padding: 60px 50px;
+
+  max-width: 480px;
   width: 100%;
-  animation: slideUp 0.5s ease-out;
+  animation: slideUp 0.6s ease-out;
+
+
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 50px;
 }
 
-.login-header h1 {
-  color: #333;
-  margin-bottom: 8px;
-  font-size: 28px;
-  font-weight: 600;
+.welcome-text {
+  font-family: 'Poppins', sans-serif;
+  color: #5E777A; /* Myrtle Green */
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
 }
 
-.login-header p {
-  color: #666;
+.brand-name {
+  font-family: 'Jersey 10', cursive;
+  color: #96362D; /* Auburn */
+  margin-bottom: 20px;
+  font-size: 8rem;
+  font-weight: 400;
+
+  line-height: 0.8;
+}
+
+.subtitle {
+  font-family: 'Poppins', sans-serif;
+  color: #5E777A; /* Myrtle Green */
   margin: 0;
   font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 .form-error {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(252, 62, 41, 0.1) 0%, rgba(252, 62, 41, 0.05) 100%);
+  border: 1px solid rgba(252, 62, 41, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 25px;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   animation: shake 0.5s ease-in-out;
 }
 
 .error-icon {
-  font-size: 18px;
+  font-size: 20px;
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -260,31 +282,34 @@ onMounted(() => {
 
 .error-title {
   font-weight: 600;
-  color: #dc2626;
-  font-size: 14px;
-  margin-bottom: 4px;
+  color: #96362D; /* Tomato */
+  font-size: 15px;
+  margin-bottom: 6px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .error-message {
-  color: #dc2626;
+  color: #96362D; /* Tomato */
   font-size: 14px;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
 }
 
 .error-suggestion {
-  background: #fff3cd;
-  color: #856404;
+  background: rgba(246, 244, 205, 0.8);
+  color: #5E777A;
   font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .error-link {
-  color: #667eea;
+  color: #96362D; /* Auburn */
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .error-link:hover {
@@ -292,106 +317,125 @@ onMounted(() => {
 }
 
 .form-success {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid #a7f3d0;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(91, 120, 124, 0.1) 0%, rgba(91, 120, 124, 0.05) 100%);
+  border: 1px solid rgba(91, 120, 124, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 25px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  animation: slideDown 0.3s ease;
+  gap: 14px;
+  animation: slideDown 0.4s ease;
 }
 
 .success-icon {
-  font-size: 18px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
 .success-message {
-  color: #065f46;
-  font-size: 14px;
+  color: #5E777A; /* Myrtle Green */
+  font-size: 15px;
   font-weight: 500;
+  font-family: 'Poppins', sans-serif;
 }
 
 .login-form {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-weight: 500;
-  color: #374151;
-  font-size: 14px;
+  color: #5E777A; /* Myrtle Green */
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 18px 24px;
+  border: 2px solid rgba(91, 120, 124, 0.2);
+  border-radius: 50px;
   font-size: 16px;
-  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
   box-sizing: border-box;
-  background: white;
+  background: #d9d2c0;
+  color: #5E777A;
+}
+
+.form-group input::placeholder {
+  color: rgba(91, 120, 124, 0.6);
+  font-family: 'Poppins', sans-serif;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #5E777A; /* Myrtle Green */
+  background: #d9d2c0;
+  box-shadow: 0 0 0 4px rgba(91, 120, 124, 0.1);
+  transform: translateY(-2px);
 }
 
 .form-group input.error-input {
-  border-color: #dc2626;
-  background-color: #fef2f2;
+  border-color: #96362D; /* Tomato */
+  background-color: rgba(252, 62, 41, 0.05);
 }
 
 .form-group input:disabled {
-  background-color: #f9fafb;
+  background-color: rgba(246, 244, 205, 0.5);
   cursor: not-allowed;
   opacity: 0.7;
 }
 
 .login-button {
   width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #5E777A 0%, #101622 100%); /* Myrtle to Rich Black */
   color: white;
   border: none;
-  padding: 14px 20px;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 18px 24px;
+  border-radius: 50px;
+  font-size: 18px;
   font-weight: 600;
+  font-family: 'Poppins', sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 48px;
+  gap: 10px;
+  min-height: 56px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 20px rgba(91, 120, 124, 0.3);
 }
 
 .login-button:hover:not(:disabled) {
-  opacity: 0.9;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(91, 120, 124, 0.4);
+  background: linear-gradient(135deg, #101622 0%, #5E777A 100%);
+}
+
+.login-button:active:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .login-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgba(91, 120, 124, 0.2);
 }
 
 .loading-spinner {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
@@ -399,53 +443,61 @@ onMounted(() => {
 }
 
 .demo-login {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 20px;
-  margin-bottom: 20px;
+  border-top: 1px solid rgba(91, 120, 124, 0.2);
+  padding-top: 30px;
+  margin-bottom: 30px;
 }
 
 .demo-login p {
   text-align: center;
-  margin-bottom: 15px;
-  font-size: 14px;
-  color: #6b7280;
+  margin-bottom: 20px;
+  font-size: 15px;
+  color: #5E777A; /* Myrtle Green */
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
 }
 
 .demo-buttons {
   display: flex;
-  gap: 12px;
+  gap: 15px;
 }
 
 .demo-button {
   flex: 1;
-  padding: 10px 16px;
+  padding: 12px 20px;
   border: 2px solid;
-  border-radius: 8px;
+  border-radius: 25px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: white;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.3px;
 }
 
 .demo-button.admin {
-  border-color: #dc2626;
-  color: #dc2626;
+  border-color: #96362D; /* Auburn */
+  color: #96362D;
 }
 
 .demo-button.admin:hover:not(:disabled) {
-  background: #dc2626;
+  background: #96362D;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(162, 43, 37, 0.3);
 }
 
 .demo-button.user {
-  border-color: #059669;
-  color: #059669;
+  border-color: #96362D; /* Tomato */
+  color: #96362D;
 }
 
 .demo-button.user:hover:not(:disabled) {
-  background: #059669;
+  background: #96362D;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(252, 62, 41, 0.3);
 }
 
 .demo-button:disabled {
@@ -455,52 +507,64 @@ onMounted(() => {
 
 .demo-note {
   font-size: 12px;
-  color: #9ca3af;
+  color: rgba(91, 120, 124, 0.7);
   font-style: italic;
   text-align: center;
-  margin-top: 10px;
+  margin-top: 15px;
+  font-family: 'Kalam', cursive;
+  font-weight: 300;
 }
 
 .login-footer {
   text-align: center;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 20px;
+  border-top: 1px solid rgba(91, 120, 124, 0.15);
+  padding-top: 25px;
 }
 
 .login-footer p {
-  color: #6b7280;
-  margin: 8px 0;
-  font-size: 14px;
+  color: #5E777A; /* Myrtle Green */
+  margin: 12px 0;
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
 }
 
 .forgot-password a {
-  color: #667eea;
+  color: #96362D; /* Auburn */
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 8px;
 }
 
 .forgot-password a:hover {
+  background: rgba(162, 43, 37, 0.1);
   text-decoration: underline;
 }
 
 .signup-link {
-  color: #667eea;
+  color: #96362D; /* Tomato */
   text-decoration: none;
-  font-weight: 500;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
 }
 
 .signup-link:hover {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(252, 62, 41, 0.1);
   text-decoration: underline;
+  transform: translateY(-1px);
 }
 
 /* Animations */
 @keyframes slideUp {
   from {
-    transform: translateY(30px);
+    transform: translateY(40px);
     opacity: 0;
   }
   to {
@@ -511,7 +575,7 @@ onMounted(() => {
 
 @keyframes slideDown {
   from {
-    transform: translateY(-10px);
+    transform: translateY(-15px);
     opacity: 0;
   }
   to {
@@ -522,30 +586,60 @@ onMounted(() => {
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* Responsive */
-@media (max-width: 480px) {
+/* Responsive Design */
+@media (max-width: 580px) {
   .login-page {
     padding: 15px;
   }
 
   .login-container {
-    padding: 30px 24px;
+    padding: 40px 30px;
+    border-radius: 20px;
   }
 
-  .login-header h1 {
-    font-size: 24px;
+  .brand-name {
+    font-size: 56px;
+  }
+
+  .welcome-text {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 16px;
   }
 
   .demo-buttons {
     flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-group input {
+    padding: 16px 20px;
+    font-size: 15px;
+  }
+
+  .login-button {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .login-container {
+    padding: 30px 20px;
+  }
+
+  .brand-name {
+    font-size: 48px;
   }
 }
 </style>

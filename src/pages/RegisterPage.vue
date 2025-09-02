@@ -1,166 +1,183 @@
 <template>
   <div class="register-page">
-    <div class="register-container">
-      <div class="register-header">
-        <h1>Create Account</h1>
-        <p>Join SecureDocs to start managing your files securely</p>
+    <!-- Left Side - Brand -->
+    <div class="brand-section">
+      <div class="brand-content">
+        <h1 class="brand-name">Fylor</h1>
+        <h2 class="brand-subtitle">Join Us</h2>
+        <p class="brand-description">to start managing and sharing your files securely</p>
+        <div class="brand-footer">
+          <a href="/about" class="footer-link">About Us</a>
+          <span class="separator">|</span>
+          <a href="/contact" class="footer-link">Contact</a>
+        </div>
       </div>
+    </div>
 
-      <form @submit.prevent="handleRegister" class="register-form" novalidate>
-        <!-- Name Field -->
-        <div class="form-group">
-          <label for="name" class="form-label">Full Name</label>
-          <input
-            id="name"
-            v-model="formData.name"
-            type="text"
-            class="form-input"
-            :class="{ error: errors.name }"
-            placeholder="Enter your full name"
-            required
-            autocomplete="name"
-          />
-          <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
-        </div>
-
-        <!-- Email Field -->
-        <div class="form-group">
-          <label for="email" class="form-label">Email Address</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            :class="{ error: errors.email }"
-            placeholder="Enter your email address"
-            required
-            autocomplete="email"
-          />
-          <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
-        </div>
-
-        <!-- Password Field -->
-        <div class="form-group">
-          <label for="password" class="form-label">Password</label>
-          <div class="password-input-container">
-            <input
-              id="password"
-              v-model="formData.password"
-              :type="showPassword ? 'text' : 'password'"
-              class="form-input"
-              :class="{ error: errors.password }"
-              placeholder="Create a strong password"
-              required
-              autocomplete="new-password"
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="showPassword = !showPassword"
-              :aria-label="showPassword ? 'Hide password' : 'Show password'"
-            >
-              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
-            </button>
+    <!-- Right Side - Form -->
+    <div class="form-section">
+      <div class="form-container">
+        <!-- Error Message -->
+        <div v-if="generalError" class="form-error">
+          <span class="error-icon">⚠️</span>
+          <div class="error-content">
+            <div class="error-title">Registration Failed</div>
+            <div class="error-message">{{ generalError }}</div>
           </div>
-          <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
-
-          <!-- Password Strength Indicator -->
-          <div v-if="formData.password" class="password-strength">
-            <div class="strength-bar">
-              <div
-                class="strength-fill"
-                :class="passwordStrength.class"
-                :style="{ width: passwordStrength.percentage + '%' }"
-              ></div>
-            </div>
-            <span class="strength-text" :class="passwordStrength.class">
-              {{ passwordStrength.text }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Confirm Password Field -->
-        <div class="form-group">
-          <label for="confirmPassword" class="form-label">Confirm Password</label>
-          <input
-            id="confirmPassword"
-            v-model="formData.confirmPassword"
-            type="password"
-            class="form-input"
-            :class="{ error: errors.confirmPassword }"
-            placeholder="Confirm your password"
-            required
-            autocomplete="new-password"
-          />
-          <span v-if="errors.confirmPassword" class="error-message">{{
-            errors.confirmPassword
-          }}</span>
-        </div>
-
-        <!-- Role Selection -->
-        <div class="form-group">
-          <label for="role" class="form-label">Account Type</label>
-          <select
-            id="role"
-            v-model="formData.role"
-            class="form-select"
-            :class="{ error: errors.role }"
-            required
-          >
-            <option value="">Select account type</option>
-            <option value="user">Standard User</option>
-            <option value="admin">Administrator</option>
-          </select>
-          <span v-if="errors.role" class="error-message">{{ errors.role }}</span>
-          <p class="role-description">
-            {{ getRoleDescription(formData.role) }}
-          </p>
-        </div>
-
-        <!-- Terms and Conditions -->
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input
-              type="checkbox"
-              v-model="formData.agreeToTerms"
-              class="checkbox-input"
-              :class="{ error: errors.agreeToTerms }"
-              required
-            />
-            <span class="checkbox-custom"></span>
-            I agree to the <a href="/terms" target="_blank" class="link">Terms of Service</a> and
-            <a href="/privacy" target="_blank" class="link">Privacy Policy</a>
-          </label>
-          <span v-if="errors.agreeToTerms" class="error-message">{{ errors.agreeToTerms }}</span>
-        </div>
-
-        <!-- Submit Button -->
-        <button
-          type="submit"
-          :disabled="isLoading || !isFormValid"
-          class="register-button submit-button"
-        >
-          <span v-if="isLoading" class="spinner"></span>
-          <span v-else>Sign Up</span>
-        </button>
-
-        <!-- Error Display -->
-        <div v-if="generalError" class="general-error">
-          <span>{{ generalError }}</span>
         </div>
 
         <!-- Success Message -->
-        <div v-if="successMessage" class="success-message">
-          <span>{{ successMessage }}</span>
+        <div v-if="successMessage" class="form-success">
+          <span class="success-icon">✅</span>
+          <div class="success-message">{{ successMessage }}</div>
         </div>
-      </form>
 
-      <!-- Login Link -->
-      <div class="login-link">
-        <p>
-          Already have an account?
-          <router-link to="/login" class="link">Sign in here</router-link>
-        </p>
+        <form @submit.prevent="handleRegister" class="register-form">
+          <!-- Full Name -->
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input
+              id="name"
+              v-model="formData.name"
+              type="text"
+              placeholder="Enter Your Full Name"
+              required
+              :disabled="isLoading"
+              :class="{ 'error-input': errors.name }"
+              @blur="validateName"
+            />
+            <span v-if="errors.name" class="field-error">{{ errors.name }}</span>
+          </div>
+
+          <!-- Email Address -->
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+              id="email"
+              v-model="formData.email"
+              type="email"
+              placeholder="Enter Your Email Address"
+              required
+              :disabled="isLoading"
+              :class="{ 'error-input': errors.email }"
+              @blur="validateEmail"
+            />
+            <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="password-container">
+              <input
+                id="password"
+                v-model="formData.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Create A Strong Password"
+                required
+                :disabled="isLoading"
+                :class="{ 'error-input': errors.password }"
+                @blur="validatePassword"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
+            <span v-if="errors.password" class="field-error">{{ errors.password }}</span>
+
+            <!-- Password Strength Indicator -->
+            <div v-if="formData.password" class="password-strength">
+              <div class="strength-bar">
+                <div
+                  class="strength-fill"
+                  :class="passwordStrength.class"
+                  :style="{ width: passwordStrength.percentage + '%' }"
+                ></div>
+              </div>
+              <span class="strength-text" :class="passwordStrength.class">
+                {{ passwordStrength.text }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <input
+              id="confirmPassword"
+              v-model="formData.confirmPassword"
+              type="password"
+              placeholder="Confirm Your Password"
+              required
+              :disabled="isLoading"
+              :class="{ 'error-input': errors.confirmPassword }"
+              @blur="validateConfirmPassword"
+            />
+            <span v-if="errors.confirmPassword" class="field-error">{{ errors.confirmPassword }}</span>
+          </div>
+
+          <!-- Account Type -->
+          <div class="form-group">
+            <label for="role">Account Type</label>
+            <select
+              id="role"
+              v-model="formData.role"
+              required
+              :disabled="isLoading"
+              :class="{ 'error-input': errors.role }"
+              @change="validateRole"
+            >
+              <option value="">Select Account Type</option>
+              <option value="user">Standard User</option>
+              <option value="admin">Administrator</option>
+            </select>
+            <span v-if="errors.role" class="field-error">{{ errors.role }}</span>
+            <p class="role-description">{{ getRoleDescription(formData.role) }}</p>
+          </div>
+
+          <!-- Terms Agreement -->
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="formData.agreeToTerms"
+                class="checkbox-input"
+                :class="{ error: errors.agreeToTerms }"
+                required
+                @change="validateTerms"
+              />
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">
+                I agree to the <a href="/terms" target="_blank" class="link">Terms of Service</a> and
+                <a href="/privacy" target="_blank" class="link">Privacy Policy</a>
+              </span>
+            </label>
+            <span v-if="errors.agreeToTerms" class="field-error">{{ errors.agreeToTerms }}</span>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            :disabled="isLoading || !isFormValid"
+            class="register-button"
+          >
+            <span v-if="isLoading" class="loading-spinner"></span>
+            <span v-else>Sign Up</span>
+          </button>
+        </form>
+
+        <!-- Login Link -->
+        <div class="login-link">
+          <p>
+            Already have an account?
+            <router-link to="/login" class="link">Sign in here</router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -203,7 +220,7 @@ const errors = reactive({
 const generalError = ref('')
 const successMessage = ref('')
 
-// Password strength calculation (unchanged)
+// Password strength calculation
 const passwordStrength = computed(() => {
   const password = formData.password
   if (!password) return { percentage: 0, text: '', class: '' }
@@ -243,7 +260,7 @@ const passwordStrength = computed(() => {
   return { percentage: score, text, class: className }
 })
 
-// Form validation (unchanged)
+// Form validation
 const isFormValid = computed(() => {
   return (
     formData.name.trim() &&
@@ -326,7 +343,7 @@ function getRoleDescription(role: string): string {
   }
 }
 
-// Watch for form changes (unchanged)
+// Watch for form changes
 watch(() => formData.name, validateName)
 watch(() => formData.email, validateEmail)
 watch(
@@ -366,10 +383,8 @@ async function handleRegister() {
     })
 
     if (success) {
-      successMessage.value = 'Account created successfully! Redirecting to dashboard...'
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1500)
+      successMessage.value = 'Account created successfully! Please check your email for confirmation.'
+      // Don't redirect immediately - let user confirm email first
     } else {
       generalError.value = registerError.value || 'Registration failed. Please try again.'
     }
@@ -381,45 +396,104 @@ async function handleRegister() {
 </script>
 
 <style scoped>
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Poppins:wght@300;400;500;600;700&family=Kalam:wght@300;400;700&display=swap');
+
 .register-page {
   min-height: 100vh;
   display: flex;
+  font-family: 'Poppins', sans-serif;
+  background: #F4E6CF; /* Champagne background */
+}
+
+/* Left Side - Brand Section */
+.brand-section {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-}
-
-.register-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   padding: 40px;
+  background: #F4E6CF;
+}
+
+.brand-content {
+  text-align: left;
+  max-width: 600px;
+}
+
+.brand-name {
+  font-family: 'Jersey 10', cursive;
+  color: #A22B25; /* Auburn */
+  font-size: 8rem;
+  font-weight: 400;
+  line-height: 0.8;
+  margin-bottom: 0.1rem;
+}
+
+.brand-subtitle {
+  font-family: 'Poppins', sans-serif;
+  color: #5B787C; /* Myrtle Green */
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  letter-spacing: 0.5px;
+}
+
+.brand-description {
+  font-family: 'Poppins', sans-serif;
+  color: #5B787C; /* Myrtle Green */
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: 60px;
+  letter-spacing: 0.3px;
+}
+
+.brand-footer {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.footer-link {
+  font-family: 'Poppins', sans-serif;
+  color: #5B787C; /* Myrtle Green */
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.footer-link:hover {
+  color: #A22B25; /* Auburn */
+  text-decoration: underline;
+}
+
+.separator {
+  color: #5B787C;
+  font-weight: 300;
+}
+
+/* Right Side - Form Section */
+.form-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #F4E6CF;
+}
+
+.form-container {
   width: 100%;
-  max-width: 500px;
-}
-
-.register-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.register-header h1 {
-  color: #2d3748;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.register-header p {
-  color: #718096;
-  font-size: 16px;
+  max-width: 400px;
 }
 
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0.5rem;
+  margin-bottom: 30px;
 }
 
 .form-group {
@@ -427,67 +501,91 @@ async function handleRegister() {
   flex-direction: column;
 }
 
-.form-label {
-  color: #2d3748;
-  font-weight: 600;
-  margin-bottom: 6px;
-  font-size: 14px;
+.form-group label {
+  font-family: 'Poppins', sans-serif;
+  color: #5B787C; /* Myrtle Green */
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
 }
 
-.form-input,
-.form-select {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 24px;
+  border: 2px solid rgba(91, 120, 124, 0.2);
+  border-radius: 50px;
   font-size: 16px;
-  transition: all 0.2s ease;
-  background: white;
-  color: #2d3748;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: #d9d2c0 !important; /* Force the background color */
+  color: #5B787C;
 }
 
-.form-input:focus,
-.form-select:focus {
+.form-group input::placeholder {
+  color: rgba(91, 120, 124, 0.6);
+  font-family: 'Poppins', sans-serif;
+}
+
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #5B787C; /* Myrtle Green */
+  background: #d9d2c0 !important;
+  box-shadow: 0 0 0 4px rgba(91, 120, 124, 0.1);
+  transform: translateY(-2px);
 }
 
-.form-input.error,
-.form-select.error {
-  border-color: #e53e3e;
+.form-group input.error-input,
+.form-group select.error-input {
+  border-color: #A22B25; /* Auburn */
+  background-color: rgba(162, 43, 37, 0.05) !important;
 }
 
-.password-input-container {
+.form-group input:disabled,
+.form-group select:disabled {
+  background-color: rgba(217, 210, 192, 0.5) !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Password Container */
+.password-container {
   position: relative;
 }
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 20px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
   font-size: 18px;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
+  color: rgba(91, 120, 124, 0.6);
+  transition: all 0.2s ease;
+  padding: 4px;
 }
 
 .password-toggle:hover {
-  opacity: 1;
+  color: #5B787C;
 }
 
+/* Password Strength */
 .password-strength {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .strength-bar {
   width: 100%;
   height: 4px;
-  background: #e2e8f0;
+  background: rgba(91, 120, 124, 0.2);
   border-radius: 2px;
   overflow: hidden;
+  margin-bottom: 6px;
 }
 
 .strength-fill {
@@ -495,45 +593,42 @@ async function handleRegister() {
   transition: all 0.3s ease;
 }
 
-.strength-fill.weak {
-  background: #e53e3e;
-}
-.strength-fill.fair {
-  background: #f6ad55;
-}
-.strength-fill.good {
-  background: #68d391;
-}
-.strength-fill.strong {
-  background: #38a169;
-}
+.strength-fill.weak { background: #A22B25; }
+.strength-fill.fair { background: #FC3E29; }
+.strength-fill.good { background: #5B787C; }
+.strength-fill.strong { background: #101622; }
 
 .strength-text {
   font-size: 12px;
-  margin-top: 4px;
-  display: block;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
 }
 
-.strength-text.weak {
-  color: #e53e3e;
-}
-.strength-text.fair {
-  color: #d69e2e;
-}
-.strength-text.good {
-  color: #38a169;
-}
-.strength-text.strong {
-  color: #2f855a;
+.strength-text.weak { color: #A22B25; }
+.strength-text.fair { color: #FC3E29; }
+.strength-text.good { color: #5B787C; }
+.strength-text.strong { color: #101622; }
+
+/* Select Dropdown */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%235B787C' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 20px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 50px;
 }
 
 .role-description {
   font-size: 12px;
-  color: #718096;
-  margin-top: 4px;
+  color: rgba(91, 120, 124, 0.7);
+  margin-top: 6px;
   font-style: italic;
+  font-family: 'Kalam', cursive;
+  font-weight: 300;
 }
 
+/* Checkbox */
 .checkbox-label {
   display: flex;
   align-items: flex-start;
@@ -541,6 +636,7 @@ async function handleRegister() {
   cursor: pointer;
   font-size: 14px;
   line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
 }
 
 .checkbox-input {
@@ -551,17 +647,18 @@ async function handleRegister() {
 .checkbox-custom {
   width: 18px;
   height: 18px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid rgba(91, 120, 124, 0.3);
   border-radius: 4px;
   flex-shrink: 0;
   margin-top: 2px;
   transition: all 0.2s ease;
   position: relative;
+  background: #d9d2c0;
 }
 
 .checkbox-input:checked + .checkbox-custom {
-  background: #667eea;
-  border-color: #667eea;
+  background: #5B787C;
+  border-color: #5B787C;
 }
 
 .checkbox-input:checked + .checkbox-custom::after {
@@ -575,134 +672,272 @@ async function handleRegister() {
   font-weight: bold;
 }
 
-.submit-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.checkbox-text {
+  color: #5B787C;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.8rem;
+}
+
+/* Register Button */
+.register-button {
+  width: 100%;
+  background: linear-gradient(135deg, #598286 2% , #1c393a 100%);
   color: white;
   border: none;
-  padding: 14px 24px;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 8px 24px;
+  border-radius: 50px;
+  font-size: 18px;
   font-weight: 600;
+  font-family: 'Poppins', sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  min-height: 56px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 20px rgba(91, 120, 124, 0.3);
+  margin-top: 10px;
 }
 
-.register-button {
-  /* ... existing styles ... */
-  position: relative;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
+.register-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(91, 120, 124, 0.4);
+  background: linear-gradient(135deg, #101622 0%, #5B787C 100%);
 }
 
-/* Minimalistic Loading Spinner */
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ccc;
-  border-top: 2px solid #007bff;
-  border-radius: 50%;
-  animation: spin 2s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
-.submit-button:disabled {
+.register-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  box-shadow: 0 4px 12px rgba(91, 120, 124, 0.2);
 }
 
 .loading-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+/* Error Messages */
+.field-error {
+  color: #A22B25; /* Auburn */
+  font-size: 12px;
+  margin-top: 4px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.form-error {
+  background: linear-gradient(135deg, rgba(162, 43, 37, 0.1) 0%, rgba(162, 43, 37, 0.05) 100%);
+  border: 1px solid rgba(162, 43, 37, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-title {
+  font-weight: 600;
+  color: #A22B25;
+  font-size: 15px;
+  margin-bottom: 6px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .error-message {
-  color: #e53e3e;
-  font-size: 12px;
-  margin-top: 4px;
+  color: #A22B25;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
 }
 
-.general-error {
-  background: #fed7d7;
-  color: #c53030;
-  padding: 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  text-align: center;
+.form-success {
+  background: linear-gradient(135deg, rgba(91, 120, 124, 0.1) 0%, rgba(91, 120, 124, 0.05) 100%);
+  border: 1px solid rgba(91, 120, 124, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  animation: slideDown 0.4s ease;
+}
+
+.success-icon {
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .success-message {
-  background: #c6f6d5;
-  color: #2f855a;
-  padding: 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  text-align: center;
+  color: #5B787C;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
 }
 
+/* Login Link */
 .login-link {
   text-align: center;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 25px;
 }
 
 .login-link p {
-  color: #718096;
+  color: #5B787C;
   margin: 0;
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
 }
 
 .link {
-  color: #667eea;
+  color: #A22B25; /* Auburn */
   text-decoration: none;
   font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
 .link:hover {
+  background: rgba(162, 43, 37, 0.1);
   text-decoration: underline;
 }
 
-/* Responsive design */
-@media (max-width: 640px) {
-  .register-container {
-    padding: 24px;
-    margin: 10px;
+/* Animations */
+@keyframes slideDown {
+  from {
+    transform: translateY(-15px);
+    opacity: 0;
   }
-
-  .register-header h1 {
-    font-size: 24px;
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .register-page {
+    flex-direction: column;
+  }
+
+  .brand-section {
+    flex: none;
+    padding: 30px 20px;
+    text-align: center;
+  }
+
+  .brand-content {
+    text-align: center;
+    max-width: none;
+  }
+
+  .brand-name {
+    font-size: 8rem;
+    margin-bottom: 0;
+  }
+
+  .brand-subtitle {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+
+  .brand-description {
+    font-size: 1rem;
+    margin-bottom: 30px;
+  }
+
+  .form-section {
+    flex: none;
+    padding: 20px;
+  }
+
+  .form-container {
+    max-width: none;
+  }
+
+  .register-form {
+    gap: 20px;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 16px 20px;
+    font-size: 15px;
+  }
+
+  .register-button {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-section {
+    padding: 20px 15px;
+  }
+
+  .brand-name {
+    font-size: 4rem;
+  }
+
+  .brand-subtitle {
+    font-size: 1.5rem;
+  }
+
+  .form-section {
+    padding: 15px;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 6px 10px;
+  }
+}
+
+
+
+
+
+.form-group input {
+  background: #d9d2c0 !important; /* Add !important */
+  /* ... rest of your existing styles ... */
+}
+
+.form-group input:focus {
+  background: #d9d2c0 !important; /* Also for focus state */
+  /* ... rest of your existing styles ... */
+}
+
+
+
 </style>
