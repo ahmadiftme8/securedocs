@@ -1,7 +1,6 @@
-// src/stores/docs.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { uploadFileToBackend, deleteFileFromBackend, downloadFileFromBackend } from '@/api/fileApi'
+import { supabase } from '@/supabase' // Ensure this matches your supabase.ts setup
 
 export interface Document {
   id: number
@@ -41,10 +40,21 @@ export const useDocsStore = defineStore('docs', () => {
     'text/plain',
     'image/png',
     'image/jpeg',
-    'image/gif'
+    'image/gif',
   ]
 
-  const ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg', 'gif']
+  const ALLOWED_EXTENSIONS = [
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'txt',
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+  ]
 
   // Initialize with sample data for development
   function initializeSampleData() {
@@ -56,7 +66,7 @@ export const useDocsStore = defineStore('docs', () => {
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         size: 2300000,
         type: 'application/pdf',
-        status: 'completed'
+        status: 'completed',
       },
       {
         id: 2,
@@ -65,7 +75,7 @@ export const useDocsStore = defineStore('docs', () => {
         createdAt: new Date(Date.now() - 172800000).toISOString(),
         size: 1500000,
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        status: 'completed'
+        status: 'completed',
       },
       {
         id: 3,
@@ -74,38 +84,32 @@ export const useDocsStore = defineStore('docs', () => {
         createdAt: new Date(Date.now() - 259200000).toISOString(),
         size: 890000,
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        status: 'completed'
-      }
+        status: 'completed',
+      },
     ]
   }
 
   // File validation
   function validateFile(file: File): { isValid: boolean; error?: string } {
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
       return {
         isValid: false,
-        error: `File size exceeds 5MB limit. Current size: ${formatFileSize(file.size)}`
+        error: `File size exceeds 5MB limit. Current size: ${formatFileSize(file.size)}`,
       }
     }
-
-    // Check file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return {
         isValid: false,
-        error: `File type "${file.type}" is not allowed`
+        error: `File type "${file.type}" is not allowed`,
       }
     }
-
-    // Check file extension as backup
     const extension = file.name.split('.').pop()?.toLowerCase()
     if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
       return {
         isValid: false,
-        error: `File extension "${extension}" is not allowed`
+        error: `File extension "${extension}" is not allowed`,
       }
     }
-
     return { isValid: true }
   }
 
@@ -116,11 +120,10 @@ export const useDocsStore = defineStore('docs', () => {
     }
   }
 
-  // Upload single file with chunked upload support
+  // Upload single file with progress tracking (simplified for Supabase)
   async function uploadSingleFile(file: File, uploadedBy: string): Promise<void> {
     const fileId = `${Date.now()}_${file.name}`
 
-    // Validate file
     const validation = validateFile(file)
     if (!validation.isValid) {
       error.value = validation.error || 'File validation failed'
@@ -128,14 +131,12 @@ export const useDocsStore = defineStore('docs', () => {
     }
 
     try {
-      // Initialize progress tracking
       uploadProgresses.value.set(fileId, {
         fileId,
         progress: 0,
-        status: 'uploading'
+        status: 'uploading',
       })
 
-      // Create temporary document entry
       const tempDoc: Document = {
         id: Date.now(),
         name: file.name,
@@ -144,70 +145,68 @@ export const useDocsStore = defineStore('docs', () => {
         size: file.size,
         type: file.type,
         status: 'uploading',
-        uploadProgress: 0
+        uploadProgress: 0,
       }
 
       docs.value.unshift(tempDoc)
 
-      // Upload file to backend with progress tracking
-      const result = await uploadFileToBackend(file, {
-        onProgress: (progress: number) => {
-          // Update progress
+      // Supabase upload with progress (Note: Supabase doesn't natively support progress tracking, so we'll simulate it)
+      const { data, error: uploadError } = await supabase.storage
+        .from('securedocs-bucket') // Replace with your bucket name
+        .upload(`public/${file.name}`, file, {
+          upsert: true,
+        })
+
+      // Simulate progress (Supabase upload is a single call, so progress is 0% to 100% instantly)
+      let progress = 0
+      const interval = setInterval(() => {
+        if (progress < 100) {
+          progress += 10
           const progressInfo = uploadProgresses.value.get(fileId)
           if (progressInfo) {
             progressInfo.progress = progress
             uploadProgresses.value.set(fileId, progressInfo)
+            const docIndex = docs.value.findIndex((doc) => doc.id === tempDoc.id)
+            if (docIndex !== -1) {
+              docs.value[docIndex].uploadProgress = progress
+            }
           }
-
-          // Update document progress
-          const docIndex = docs.value.findIndex(doc => doc.id === tempDoc.id)
-          if (docIndex !== -1) {
-            docs.value[docIndex].uploadProgress = progress
-          }
-        },
-        metadata: {
-          uploadedBy,
-          originalName: file.name,
-          checksum: await calculateFileChecksum(file)
+        } else {
+          clearInterval(interval)
         }
-      })
+      }, 100)
 
-      // Update document with backend response
-      const docIndex = docs.value.findIndex(doc => doc.id === tempDoc.id)
+      if (uploadError) throw uploadError
+
+      const docIndex = docs.value.findIndex((doc) => doc.id === tempDoc.id)
       if (docIndex !== -1) {
         docs.value[docIndex] = {
           ...docs.value[docIndex],
-          id: result.id,
-          url: result.url,
+          id: Date.now(), // Supabase doesn't return an ID; you might want to store in a table
+          url: supabase.storage.from('securedocs-bucket').getPublicUrl(`public/${file.name}`).data
+            .publicUrl,
           status: 'completed',
           uploadProgress: 100,
-          checksum: result.checksum,
-          thumbnail: result.thumbnail
+          checksum: await calculateFileChecksum(file),
         }
       }
 
-      // Mark upload as completed
       uploadProgresses.value.set(fileId, {
         fileId,
         progress: 100,
-        status: 'completed'
+        status: 'completed',
       })
-
     } catch (err) {
-      // Handle upload failure
       const progressInfo = uploadProgresses.value.get(fileId)
       if (progressInfo) {
         progressInfo.status = 'failed'
         progressInfo.error = err instanceof Error ? err.message : 'Upload failed'
         uploadProgresses.value.set(fileId, progressInfo)
       }
-
-      // Update document status
-      const docIndex = docs.value.findIndex(doc => doc.id === tempDoc.id)
+      const docIndex = docs.value.findIndex((doc) => doc.id === tempDoc.id)
       if (docIndex !== -1) {
         docs.value[docIndex].status = 'failed'
       }
-
       error.value = err instanceof Error ? err.message : 'Upload failed'
       throw err
     }
@@ -218,7 +217,7 @@ export const useDocsStore = defineStore('docs', () => {
     const buffer = await file.arrayBuffer()
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
 
   // Delete document from backend and local state
@@ -227,16 +226,19 @@ export const useDocsStore = defineStore('docs', () => {
       isLoading.value = true
       error.value = null
 
-      const doc = docs.value.find(d => d.id === id)
-      if (!doc) {
-        throw new Error('Document not found')
+      const doc = docs.value.find((d) => d.id === id)
+      if (!doc || !doc.url) {
+        throw new Error('Document not found or URL missing')
       }
 
-      // Delete from backend
-      await deleteFileFromBackend(id)
+      const filePath = doc.url.split('/public/').pop() // Extract file path from URL
+      const { error: deleteError } = await supabase.storage
+        .from('securedocs-bucket') // Replace with your bucket name
+        .remove([filePath])
 
-      // Remove from local state
-      const index = docs.value.findIndex(d => d.id === id)
+      if (deleteError) throw deleteError
+
+      const index = docs.value.findIndex((d) => d.id === id)
       if (index !== -1) {
         docs.value.splice(index, 1)
       }
@@ -248,22 +250,35 @@ export const useDocsStore = defineStore('docs', () => {
     }
   }
 
-  // Download document with progress tracking
+  // Download document with progress tracking (simplified)
   async function downloadDoc(id: number): Promise<void> {
     try {
-      const doc = docs.value.find(d => d.id === id)
-      if (!doc) {
-        throw new Error('Document not found')
+      const doc = docs.value.find((d) => d.id === id)
+      if (!doc || !doc.url) {
+        throw new Error('Document not found or URL missing')
       }
 
-      await downloadFileFromBackend(id, doc.name)
+      const { data, error } = await supabase.storage
+        .from('securedocs-bucket')
+        .download(doc.url.split('/public/').pop()!)
+      if (error) throw error
+
+      const blob = new Blob([data])
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to download document'
       throw err
     }
   }
 
-  // Cancel upload
+  // Cancel upload (simulated cancellation)
   function cancelUpload(fileId: string): void {
     const progressInfo = uploadProgresses.value.get(fileId)
     if (progressInfo && progressInfo.status === 'uploading') {
@@ -279,21 +294,21 @@ export const useDocsStore = defineStore('docs', () => {
 
   // Get document by ID
   function getDocById(id: number): Document | undefined {
-    return docs.value.find(doc => doc.id === id)
+    return docs.value.find((doc) => doc.id === id)
   }
 
   // Get documents by user
   function getDocsByUser(userEmail: string): Document[] {
-    return docs.value.filter(doc => doc.uploadedBy === userEmail)
+    return docs.value.filter((doc) => doc.uploadedBy === userEmail)
   }
 
   // Search documents
   function searchDocs(query: string): Document[] {
     const lowercaseQuery = query.toLowerCase()
     return docs.value.filter(
-      doc =>
+      (doc) =>
         doc.name.toLowerCase().includes(lowercaseQuery) ||
-        doc.uploadedBy.toLowerCase().includes(lowercaseQuery)
+        doc.uploadedBy.toLowerCase().includes(lowercaseQuery),
     )
   }
 
@@ -303,10 +318,7 @@ export const useDocsStore = defineStore('docs', () => {
       isLoading.value = true
       error.value = null
 
-      // In production, this would fetch from your backend API
-      // const response = await fetchDocumentsFromBackend()
-      // docs.value = response.data
-
+      // In production, fetch from Supabase Storage or a custom table
       // For now, use sample data if empty
       if (docs.value.length === 0) {
         initializeSampleData()
@@ -346,24 +358,19 @@ export const useDocsStore = defineStore('docs', () => {
       png: '🖼️',
       jpg: '🖼️',
       jpeg: '🖼️',
-      gif: '🖼️'
+      gif: '🖼️',
     }
     return iconMap[extension || ''] || '📄'
   }
 
   return {
-    // State
     docs,
     isLoading,
     error,
     uploadProgresses,
-
-    // Constants
     MAX_FILE_SIZE,
     ALLOWED_TYPES,
     ALLOWED_EXTENSIONS,
-
-    // Actions
     validateFile,
     uploadFiles,
     uploadSingleFile,
@@ -379,6 +386,6 @@ export const useDocsStore = defineStore('docs', () => {
     initializeSampleData,
     formatFileSize,
     getFileIcon,
-    calculateFileChecksum
+    calculateFileChecksum,
   }
 })
