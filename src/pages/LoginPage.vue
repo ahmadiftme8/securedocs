@@ -14,7 +14,8 @@
           <div class="error-title">Login Failed</div>
           <div class="error-message">{{ currentError }}</div>
           <div v-if="showSignupSuggestion" class="error-suggestion">
-            Don't have an account? <router-link to="/register" class="error-link">Create one here</router-link>
+            Don't have an account?
+            <router-link to="/register" class="error-link">Create one here</router-link>
           </div>
         </div>
       </div>
@@ -108,18 +109,22 @@ const enableMockLogin = computed(() => import.meta.env.VITE_ENABLE_MOCK_LOGIN ==
 const envMode = computed(() => import.meta.env.MODE)
 
 const isFormValid = computed(() => {
-  return credentials.email.trim() &&
-         credentials.password.trim() &&
-         credentials.email.includes('@') &&
-         credentials.email.length > 3
+  return (
+    credentials.email.trim() &&
+    credentials.password.trim() &&
+    credentials.email.includes('@') &&
+    credentials.email.length > 3
+  )
 })
 
 const currentError = computed(() => loginError.value)
 
 const showSignupSuggestion = computed(() => {
-  return currentError.value &&
-         (currentError.value.includes('Invalid login credentials') ||
-          currentError.value.includes('Email not confirmed'))
+  return (
+    currentError.value &&
+    (currentError.value.includes('Invalid login credentials') ||
+      currentError.value.includes('Email not confirmed'))
+  )
 })
 
 // Clear error when user types
@@ -209,20 +214,17 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: #F4E6CF; /* Champagne background */
+  background: #f4e6cf; /* Champagne background */
   font-family: 'Poppins', sans-serif;
 }
 
 .login-container {
-
   border-radius: 24px;
   padding: 60px 50px;
 
   max-width: 480px;
   width: 100%;
   animation: slideUp 0.6s ease-out;
-
-
 }
 
 .login-header {
@@ -232,7 +234,7 @@ onMounted(() => {
 
 .welcome-text {
   font-family: 'Poppins', sans-serif;
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   margin-bottom: 10px;
   font-size: 1rem;
   font-weight: 400;
@@ -241,7 +243,7 @@ onMounted(() => {
 
 .brand-name {
   font-family: 'Jersey 10', cursive;
-  color: #96362D; /* Auburn */
+  color: #96362d; /* Auburn */
   margin-bottom: 20px;
   font-size: 8rem;
   font-weight: 400;
@@ -251,7 +253,7 @@ onMounted(() => {
 
 .subtitle {
   font-family: 'Poppins', sans-serif;
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   margin: 0;
   font-size: 16px;
   font-weight: 400;
@@ -270,6 +272,15 @@ onMounted(() => {
   animation: shake 0.5s ease-in-out;
 }
 
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 70px #d9d2c0 inset !important;
+  -webkit-text-fill-color: #5b787c !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .error-icon {
   font-size: 20px;
   flex-shrink: 0;
@@ -282,14 +293,14 @@ onMounted(() => {
 
 .error-title {
   font-weight: 600;
-  color: #96362D; /* Tomato */
+  color: #96362d; /* Tomato */
   font-size: 15px;
   margin-bottom: 6px;
   font-family: 'Poppins', sans-serif;
 }
 
 .error-message {
-  color: #96362D; /* Tomato */
+  color: #96362d; /* Tomato */
   font-size: 14px;
   margin-bottom: 10px;
   line-height: 1.5;
@@ -298,7 +309,7 @@ onMounted(() => {
 
 .error-suggestion {
   background: rgba(246, 244, 205, 0.8);
-  color: #5E777A;
+  color: #5e777a;
   font-size: 13px;
   padding: 10px 14px;
   border-radius: 8px;
@@ -307,7 +318,7 @@ onMounted(() => {
 }
 
 .error-link {
-  color: #96362D; /* Auburn */
+  color: #96362d; /* Auburn */
   text-decoration: none;
   font-weight: 600;
 }
@@ -334,7 +345,7 @@ onMounted(() => {
 }
 
 .success-message {
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   font-size: 15px;
   font-weight: 500;
   font-family: 'Poppins', sans-serif;
@@ -352,7 +363,7 @@ onMounted(() => {
   display: block;
   margin-bottom: 10px;
   font-weight: 500;
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   font-size: 15px;
   font-family: 'Poppins', sans-serif;
   letter-spacing: 0.3px;
@@ -361,14 +372,14 @@ onMounted(() => {
 .form-group input {
   width: 100%;
   padding: 18px 24px;
-  border: 2px solid rgba(91, 120, 124, 0.2);
+
   border-radius: 50px;
   font-size: 16px;
   font-family: 'Poppins', sans-serif;
   transition: all 0.3s ease;
   box-sizing: border-box;
   background: #d9d2c0;
-  color: #5E777A;
+  color: #5e777a;
 }
 
 .form-group input::placeholder {
@@ -378,14 +389,14 @@ onMounted(() => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #5E777A; /* Myrtle Green */
+  border-color: #5e777a; /* Myrtle Green */
   background: #d9d2c0;
   box-shadow: 0 0 0 4px rgba(91, 120, 124, 0.1);
   transform: translateY(-2px);
 }
 
 .form-group input.error-input {
-  border-color: #96362D; /* Tomato */
+  border-color: #96362d; /* Tomato */
   background-color: rgba(252, 62, 41, 0.05);
 }
 
@@ -397,7 +408,7 @@ onMounted(() => {
 
 .login-button {
   width: 100%;
-  background: linear-gradient(135deg, #5E777A 0%, #101622 100%); /* Myrtle to Rich Black */
+  background: linear-gradient(135deg, #5e777a 0%, #101622 100%); /* Myrtle to Rich Black */
   color: white;
   border: none;
   padding: 18px 24px;
@@ -419,7 +430,7 @@ onMounted(() => {
 .login-button:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 12px 30px rgba(91, 120, 124, 0.4);
-  background: linear-gradient(135deg, #101622 0%, #5E777A 100%);
+  background: linear-gradient(135deg, #101622 0%, #5e777a 100%);
 }
 
 .login-button:active:not(:disabled) {
@@ -452,7 +463,7 @@ onMounted(() => {
   text-align: center;
   margin-bottom: 20px;
   font-size: 15px;
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   font-family: 'Poppins', sans-serif;
   font-weight: 500;
 }
@@ -477,24 +488,24 @@ onMounted(() => {
 }
 
 .demo-button.admin {
-  border-color: #96362D; /* Auburn */
-  color: #96362D;
+  border-color: #96362d; /* Auburn */
+  color: #96362d;
 }
 
 .demo-button.admin:hover:not(:disabled) {
-  background: #96362D;
+  background: #96362d;
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(162, 43, 37, 0.3);
 }
 
 .demo-button.user {
-  border-color: #96362D; /* Tomato */
-  color: #96362D;
+  border-color: #96362d; /* Tomato */
+  color: #96362d;
 }
 
 .demo-button.user:hover:not(:disabled) {
-  background: #96362D;
+  background: #96362d;
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(252, 62, 41, 0.3);
@@ -522,7 +533,7 @@ onMounted(() => {
 }
 
 .login-footer p {
-  color: #5E777A; /* Myrtle Green */
+  color: #5e777a; /* Myrtle Green */
   margin: 12px 0;
   font-size: 15px;
   font-family: 'Poppins', sans-serif;
@@ -530,7 +541,7 @@ onMounted(() => {
 }
 
 .forgot-password a {
-  color: #96362D; /* Auburn */
+  color: #96362d; /* Auburn */
   text-decoration: none;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -545,7 +556,7 @@ onMounted(() => {
 }
 
 .signup-link {
-  color: #96362D; /* Tomato */
+  color: #96362d; /* Tomato */
   text-decoration: none;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -585,13 +596,22 @@ onMounted(() => {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive Design */
@@ -606,15 +626,15 @@ onMounted(() => {
   }
 
   .brand-name {
-    font-size: 56px;
+    font-size: 7rem;
   }
 
   .welcome-text {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .subtitle {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .demo-buttons {
@@ -635,11 +655,26 @@ onMounted(() => {
 
 @media (max-width: 400px) {
   .login-container {
-    padding: 30px 20px;
+    padding: 20px 20px;
+  }
+
+  .form-group input {
+    padding: 10px 12px;
   }
 
   .brand-name {
-    font-size: 48px;
+    font-size: 7rem;
   }
+
+  .login-form {
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+  }
+}
+
+input {
+  border: none;
 }
 </style>
