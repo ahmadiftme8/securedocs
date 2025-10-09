@@ -1,1896 +1,648 @@
 <template>
-  <div class="dashboard">
-    <!-- Header -->
-    <header class="dashboard-header">
-      <div class="header-content">
-        <h1>SecureDocs Dashboard</h1>
-        <div class="header-actions">
-          <span class="user-info">
-            Welcome, {{ user?.name || user?.email }}
-            <span class="user-role" :class="user?.role">{{ user?.role }}</span>
-          </span>
-          <button @click="handleLogout" class="logout-button">Logout</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="dashboard-nav" v-if="user">
-      <router-link to="/dashboard" class="nav-link" active-class="active"> Dashboard </router-link>
-      <router-link to="/profile" class="nav-link" active-class="active"> Profile </router-link>
-      <router-link v-if="hasRole('admin')" to="/admin" class="nav-link" active-class="active">
-        Admin Panel
-      </router-link>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="dashboard-main">
-      <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">📄</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ totalDocs }}</div>
-            <div class="stat-label">Total Documents</div>
-          </div>
-        </div>
-
-        <div class="stat-card" v-if="hasRole('user')">
-          <div class="stat-icon">👤</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ userDocs }}</div>
-            <div class="stat-label">My Documents</div>
-          </div>
-        </div>
-
-        <div class="stat-card" v-if="hasRole('admin')">
-          <div class="stat-icon">👥</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ totalUsers }}</div>
-            <div class="stat-label">Total Users</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">📊</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ recentActivity }}</div>
-            <div class="stat-label">Recent Activity</div>
-          </div>
-        </div>
+  <div class="fylor-dashboard">
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1 class="logo">Fylor</h1>
+        <button class="profile-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" fill="white"/>
+            <path d="M4 20C4 16.6863 6.68629 14 10 14H14C17.3137 14 20 16.6863 20 20V21H4V20Z" fill="white"/>
+          </svg>
+        </button>
       </div>
 
-      <!-- Document Management -->
-      <div class="documents-section">
-        <div class="section-header">
-          <h2>Document Management</h2>
-          <div class="section-actions">
-            <button @click="showUploadModal = true" class="primary-button">
-              <span class="button-icon">📤</span>
-              Upload Documents
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <p class="welcome-text">WelCom to Your Dashboard</p>
+        <h2 class="user-name">{{ userName }}</h2>
+      </div>
+
+      <!-- Upload Area -->
+      <div
+        class="upload-area"
+        :class="{ 'drag-over': isDragging }"
+        @dragenter.prevent="handleDragEnter"
+        @dragover.prevent
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
+        <p class="upload-title">Drag & Drop Files Here</p>
+        <button class="upload-button" @click="triggerFileInput">
+          <span class="upload-button-icon">+</span>
+          Upload New Document
+        </button>
+        <input
+          ref="fileInput"
+          type="file"
+          class="file-input"
+          multiple
+          @change="handleFileSelect"
+        />
+        <p class="file-types">excel, docx, text, csv, pdf, etc</p>
+      </div>
+
+      <!-- Recent Docs Section -->
+      <div class="recent-docs-section">
+        <h3 class="section-title">Your Recent  Docs:</h3>
+
+        <!-- Filters -->
+        <div class="filters">
+          <!-- Search -->
+          <div class="search-wrapper">
+            <svg
+              class="search-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle cx="11" cy="11" r="8" stroke="#B99D6E" stroke-width="2"/>
+              <path d="M21 21L16.65 16.65" stroke="#B99D6E" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="Search in Documents..."
+            />
+          </div>
+
+          <!-- Sort -->
+          <select v-model="sortBy" class="sort-select">
+            <option value="date">Sort by...</option>
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+          </select>
+
+          <!-- Checkbox -->
+          <label class="checkbox-label">
+            <input
+              v-model="showOnlyMyDocs"
+              type="checkbox"
+              class="checkbox-input"
+            />
+            Show only my documents
+          </label>
+        </div>
+
+        <!-- Documents Grid -->
+        <div class="documents-grid">
+          <div
+            v-for="doc in filteredDocuments"
+            :key="doc.id"
+            class="document-card"
+          >
+            <!-- File Icon -->
+            <div class="file-icon-wrapper" v-html="getFileIcon(doc.name)"></div>
+
+            <!-- File Name -->
+            <h4 class="file-name">{{ doc.name }}</h4>
+
+            <!-- File Meta -->
+            <div class="file-meta">
+              <div>{{ formatDate(doc.createdAt) }}</div>
+              <div>Size: {{ docsStore.formatFileSize(doc.size) }}</div>
+            </div>
+
+            <!-- Maximize Button -->
+            <button class="maximize-button" @click="maximizeDocument(doc)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 3H21V9" stroke="#96362D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 21H3V15" stroke="#96362D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 3L15 9M9 15L3 21" stroke="#96362D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </button>
           </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filters">
-          <div class="filter-group">
-            <input v-model="searchQuery" placeholder="Search documents..." class="search-input" />
-          </div>
-
-          <div class="filter-group" v-if="hasRole('admin')">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="showOnlyMine" />
-              Show only my documents
-            </label>
-          </div>
-
-          <div class="filter-group">
-            <select v-model="sortBy" class="sort-select">
-              <option value="createdAt">Sort by Date</option>
-              <option value="name">Sort by Name</option>
-              <option value="uploadedBy">Sort by Owner</option>
-              <option value="size">Sort by Size</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Documents Table -->
-        <div class="documents-table-container">
-          <table class="documents-table" v-if="filteredDocs.length > 0">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Owner</th>
-                <th>Created</th>
-                <th>Size</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="doc in filteredDocs"
-                :key="doc.id"
-                :class="{ uploading: doc.status === 'uploading' }"
-              >
-                <td class="doc-name">
-                  <div class="doc-icon">{{ docsStore.getFileIcon(doc.name) }}</div>
-                  <div class="doc-info">
-                    <div class="doc-title">{{ doc.name }}</div>
-                    <div v-if="doc.status === 'uploading'" class="upload-progress">
-                      <div class="progress-bar">
-                        <div
-                          class="progress-fill"
-                          :style="{ width: `${doc.uploadProgress || 0}%` }"
-                        ></div>
-                      </div>
-                      <span class="progress-text">{{ doc.uploadProgress || 0 }}%</span>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ doc.uploadedBy }}</td>
-                <td>{{ formatDate(doc.createdAt) }}</td>
-                <td>{{ docsStore.formatFileSize(doc.size) }}</td>
-                <td>
-                  <span class="status-badge" :class="doc.status">
-                    {{ getStatusText(doc.status) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="action-buttons">
-                    <button
-                      v-if="doc.status === 'completed'"
-                      @click="downloadDoc(doc)"
-                      class="action-button download"
-                      title="Download"
-                    >
-                      ⬇️
-                    </button>
-                    <button
-                      v-if="doc.status === 'uploading'"
-                      @click="cancelUpload(doc)"
-                      class="action-button cancel"
-                      title="Cancel Upload"
-                    >
-                      ❌
-                    </button>
-                    <button
-                      v-if="canDeleteDoc(doc)"
-                      @click="deleteDoc(doc.id)"
-                      class="action-button delete"
-                      title="Delete"
-                      :disabled="doc.status === 'uploading'"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div v-else class="empty-state">
-            <div class="empty-icon">📭</div>
-            <h3>No documents found</h3>
-            <p>
-              {{
-                searchQuery
-                  ? 'Try adjusting your search criteria.'
-                  : 'Upload your first document to get started.'
-              }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activity (Admin only) -->
-      <div v-if="hasRole('admin')" class="activity-section">
-        <div class="section-header">
-          <h2>Recent Activity</h2>
-        </div>
-        <div class="activity-feed">
-          <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-            <div class="activity-icon" :class="activity.type">
-              {{ getActivityIcon(activity.type) }}
-            </div>
-            <div class="activity-content">
-              <div class="activity-description">{{ activity.description }}</div>
-              <div class="activity-time">{{ formatDate(activity.timestamp) }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Enhanced Upload Modal -->
-    <div v-if="showUploadModal" class="modal-overlay" @click="closeUploadModal">
-      <div class="modal-content upload-modal" @click.stop>
-        <div class="modal-header">
-          <h3>Upload Documents</h3>
-          <button @click="closeUploadModal" class="close-button">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <!-- Upload Zone -->
-          <div
-            class="upload-area"
-            :class="{
-              'drag-over': isDragOver,
-              'has-files': selectedFiles.length > 0,
-            }"
-            @dragover.prevent="handleDragOver"
-            @dragleave.prevent="handleDragLeave"
-            @drop.prevent="handleDrop"
-            @click="triggerFileSelect"
-          >
-            <input
-              ref="fileInput"
-              type="file"
-              multiple
-              @change="handleFileSelect"
-              :accept="allowedFileTypes"
-              hidden
-            />
-
-            <div v-if="selectedFiles.length === 0" class="upload-zone">
-              <div class="upload-icon">📁</div>
-              <h4>Drag & Drop Files Here</h4>
-              <p>or <span class="link-text">click to browse</span></p>
-              <div class="upload-info">
-                <small>
-                  Supported: {{ allowedExtensions.join(', ').toUpperCase() }}<br />
-                  Max size: {{ formatFileSize(maxFileSize) }} per file
-                </small>
-              </div>
-            </div>
-
-            <!-- File Preview List -->
-            <div v-else class="file-preview-list">
-              <div class="file-preview-header">
-                <h4>Selected Files ({{ selectedFiles.length }})</h4>
-                <button @click="clearSelectedFiles" class="clear-button">Clear All</button>
-              </div>
-
-              <div class="file-items">
-                <div
-                  v-for="(file, index) in selectedFiles"
-                  :key="`${file.name}-${index}`"
-                  class="file-item"
-                  :class="{
-                    invalid: fileValidationErrors[index],
-                    uploading: uploadingFiles.has(file.name),
-                  }"
-                >
-                  <div class="file-icon">{{ getFileIconByType(file.type) }}</div>
-
-                  <div class="file-details">
-                    <div class="file-name">{{ file.name }}</div>
-                    <div class="file-meta">
-                      {{ formatFileSize(file.size) }} • {{ file.type.split('/')[1].toUpperCase() }}
-                    </div>
-
-                    <!-- Validation Error -->
-                    <div v-if="fileValidationErrors[index]" class="file-error">
-                      {{ fileValidationErrors[index] }}
-                    </div>
-
-                    <!-- Upload Progress -->
-                    <div v-if="uploadingFiles.has(file.name)" class="file-progress">
-                      <div class="progress-bar">
-                        <div
-                          class="progress-fill"
-                          :style="{ width: `${getFileUploadProgress(file.name)}%` }"
-                        ></div>
-                      </div>
-                      <span class="progress-text">{{ getFileUploadProgress(file.name) }}%</span>
-                    </div>
-                  </div>
-
-                  <button
-                    v-if="!uploadingFiles.has(file.name)"
-                    @click="removeFile(index)"
-                    class="remove-file-button"
-                    title="Remove file"
-                  >
-                    ❌
-                  </button>
-
-                  <div v-else class="upload-status">
-                    <div class="spinner"></div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Add More Files Button -->
-              <button @click="triggerFileSelect" class="add-more-button">
-                <span class="button-icon">➕</span>
-                Add More Files
-              </button>
-            </div>
-          </div>
-
-          <!-- Upload Options -->
-          <div v-if="selectedFiles.length > 0" class="upload-options">
-            <div class="option-group">
-              <label class="checkbox-label">
-                <input type="checkbox" v-model="generateThumbnails" />
-                Generate thumbnails for images
-              </label>
-            </div>
-
-            <div class="option-group">
-              <label class="checkbox-label">
-                <input type="checkbox" v-model="extractMetadata" />
-                Extract file metadata
-              </label>
-            </div>
-          </div>
-
-          <!-- Upload Summary -->
-          <div v-if="selectedFiles.length > 0" class="upload-summary">
-            <div class="summary-item">
-              <strong>Files:</strong> {{ validFiles.length }} valid,
-              {{ invalidFiles.length }} invalid
-            </div>
-            <div class="summary-item">
-              <strong>Total size:</strong> {{ formatFileSize(totalSelectedSize) }}
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button @click="closeUploadModal" class="secondary-button">Cancel</button>
-          <button
-            @click="startUpload"
-            :disabled="!canUpload"
-            class="primary-button"
-            :class="{ uploading: isUploading }"
-          >
-            <span v-if="isUploading" class="button-spinner"></span>
-            {{ getUploadButtonText }}
+        <!-- Show More Button -->
+        <div class="show-more-wrapper">
+          <button class="show-more-button" @click="showMore">
+            Show More
           </button>
         </div>
-      </div>
-    </div>
-
-    <!-- Global Upload Progress Overlay -->
-    <div v-if="showGlobalProgress" class="upload-progress-overlay">
-      <div class="progress-card">
-        <div class="progress-header">
-          <h4>Uploading Files...</h4>
-          <button @click="cancelAllUploads" class="cancel-all-button">Cancel All</button>
-        </div>
-
-        <div class="global-progress">
-          <div class="progress-bar large">
-            <div class="progress-fill" :style="{ width: `${globalUploadProgress}%` }"></div>
-          </div>
-          <div class="progress-info">
-            <span>{{ completedUploads }} of {{ totalUploads }} files completed</span>
-            <span>{{ globalUploadProgress }}%</span>
-          </div>
-        </div>
-
-        <div class="current-file">
-          <small>Currently uploading: {{ currentUploadFile }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Notifications -->
-    <div class="notifications">
-      <div
-        v-for="notification in notifications"
-        :key="notification.id"
-        class="notification"
-        :class="notification.type"
-      >
-        <div class="notification-content">
-          <div class="notification-title">{{ notification.title }}</div>
-          <div class="notification-message">{{ notification.message }}</div>
-        </div>
-        <button @click="dismissNotification(notification.id)" class="notification-close">×</button>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-// Add this to the TOP of your DashboardPage.vue script section (before the existing imports)
-import { onMounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useAuth } from '@/composables/useAuth'
-
-// Add these lines after your existing useAuth destructuring
-const authStoreForCheck = useAuthStore()
-const routerForCheck = useRouter()
-const { checkAuth: checkAuthFunc } = useAuth()
-
-// Add this onMounted hook right after your existing reactive data declarations
-onMounted(async () => {
-  console.log('📊 Dashboard mounted - checking auth state...')
-  console.log('📊 Current auth state:', {
-    isAuthenticated: authStoreForCheck.isAuthenticated,
-    hasUser: !!authStoreForCheck.user,
-    hasToken: !!localStorage.getItem('access_token'),
-    userEmail: authStoreForCheck.user?.email,
-  })
-
-  // If no user data but we have a token, try to restore from server
-  const hasToken = localStorage.getItem('access_token')
-  if (hasToken && !authStoreForCheck.isAuthenticated) {
-    console.log('🔍 Have token but no user data, attempting to restore...')
-
-    try {
-      const isAuthenticated = await checkAuthFunc()
-
-      if (!isAuthenticated) {
-        console.log('❌ Authentication failed, redirecting to login')
-        routerForCheck.push({
-          name: 'Login',
-          query: { redirect: '/dashboard' },
-        })
-        return
-      }
-
-      console.log('✅ Authentication restored successfully')
-    } catch (error) {
-      console.error('❌ Auth check failed:', error)
-      routerForCheck.push({
-        name: 'Login',
-        query: { redirect: '/dashboard' },
-      })
-    }
-  } else if (!hasToken) {
-    console.log('❌ No token found, redirecting to login')
-    routerForCheck.push({
-      name: 'Login',
-      query: { redirect: '/dashboard' },
-    })
-  } else {
-    console.log('✅ User already authenticated:', authStoreForCheck.user?.email)
-  }
-})
-
-// Keep all your existing code below this...
-
-import { ref, computed, onMounted, watch } from 'vue'
-import { useAuth } from '@/composables/useAuth'
 import { useDocsStore } from '@/stores/docs'
+import { useAuth } from '@/composables/useAuth'
 
+// Auth integration
 const { user, logout, hasRole } = useAuth()
+const authStore = useAuthStore()
 const docsStore = useDocsStore()
+const router = useRouter()
 
-// Reactive data
+// Data
+const userName = computed(() => user.value?.name || user.value?.email || 'User')
+const isDragging = ref(false)
 const searchQuery = ref('')
-const showOnlyMine = ref(false)
-const sortBy = ref('createdAt')
-const showUploadModal = ref(false)
-const selectedFiles = ref<File[]>([])
-const isDragOver = ref(false)
-const isUploading = ref(false)
-const uploadingFiles = ref(new Set<string>())
-const fileValidationErrors = ref<Record<number, string>>({})
-const generateThumbnails = ref(true)
-const extractMetadata = ref(true)
+const sortBy = ref('date')
+const showOnlyMyDocs = ref(false)
+const fileInput = ref(null)
 
-// Global upload progress
-const showGlobalProgress = ref(false)
-const globalUploadProgress = ref(0)
-const completedUploads = ref(0)
-const totalUploads = ref(0)
-const currentUploadFile = ref('')
+// Get documents from your store
+const documents = computed(() => docsStore.docs)
 
-// Notifications
-const notifications = ref<
-  Array<{
-    id: string
-    type: 'success' | 'error' | 'warning' | 'info'
-    title: string
-    message: string
-    timeout?: number
-  }>
->([])
+// Computed
+const filteredDocuments = computed(() => {
+  let docs = documents.value
 
-// File constraints
-const maxFileSize = computed(() => docsStore.MAX_FILE_SIZE)
-const allowedFileTypes = computed(() => docsStore.ALLOWED_TYPES.join(','))
-const allowedExtensions = computed(() => docsStore.ALLOWED_EXTENSIONS)
-
-// Computed properties
-const filteredDocs = computed(() => {
-  let docs = docsStore.docs
-
-  if (showOnlyMine.value && user.value) {
+  // Filter by ownership if checked
+  if (showOnlyMyDocs.value && user.value) {
     docs = docs.filter(
-      (doc) => doc.uploadedBy === user.value?.email || doc.uploadedBy === user.value?.role,
+      doc => doc.uploadedBy === user.value?.email || doc.uploadedBy === user.value?.role
     )
   }
 
+  // Filter by search query
   if (searchQuery.value) {
-    docs = docs.filter(
-      (doc) =>
-        doc.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        doc.uploadedBy.toLowerCase().includes(searchQuery.value.toLowerCase()),
+    docs = docs.filter(doc =>
+      doc.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
   }
 
+  // Sort documents
   return docs.sort((a, b) => {
     switch (sortBy.value) {
       case 'name':
         return a.name.localeCompare(b.name)
-      case 'uploadedBy':
-        return a.uploadedBy.localeCompare(b.uploadedBy)
       case 'size':
         return b.size - a.size
-      case 'createdAt':
+      case 'date':
       default:
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
   })
 })
 
-const totalDocs = computed(() => docsStore.docs.length)
-const userDocs = computed(() => {
-  if (!user.value) return 0
-  return docsStore.docs.filter(
-    (doc) => doc.uploadedBy === user.value?.email || doc.uploadedBy === user.value?.role,
-  ).length
-})
-const totalUsers = computed(() => 5)
-const recentActivity = computed(() => 12)
-
-const recentActivities = computed(() => [
-  {
-    id: 1,
-    type: 'upload',
-    description: 'John Doe uploaded "Project Plan.pdf"',
-    timestamp: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    type: 'delete',
-    description: 'Jane Smith deleted "Old Report.docx"',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 3,
-    type: 'download',
-    description: 'Mike Johnson downloaded "Budget.xlsx"',
-    timestamp: new Date(Date.now() - 7200000).toISOString(),
-  },
-])
-
-// File validation and upload computed properties
-const validFiles = computed(() => {
-  return selectedFiles.value.filter((_, index) => !fileValidationErrors.value[index])
-})
-
-const invalidFiles = computed(() => {
-  return selectedFiles.value.filter((_, index) => fileValidationErrors.value[index])
-})
-
-const totalSelectedSize = computed(() => {
-  return validFiles.value.reduce((total, file) => total + file.size, 0)
-})
-
-const canUpload = computed(() => {
-  return validFiles.value.length > 0 && !isUploading.value
-})
-
-const getUploadButtonText = computed(() => {
-  if (isUploading.value) return 'Uploading...'
-  if (validFiles.value.length === 0) return 'No valid files'
-  return `Upload ${validFiles.value.length} file${validFiles.value.length === 1 ? '' : 's'}`
-})
-
-// Watch for file validation
-watch(
-  selectedFiles,
-  () => {
-    validateSelectedFiles()
-  },
-  { deep: true },
-)
-
 // Methods
-function validateSelectedFiles() {
-  fileValidationErrors.value = {}
-
-  selectedFiles.value.forEach((file, index) => {
-    const validation = docsStore.validateFile(file)
-    if (!validation.isValid) {
-      fileValidationErrors.value[index] = validation.error || 'Invalid file'
-    }
-  })
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString()
 }
 
-function canDeleteDoc(doc: any): boolean {
-  if (!user.value) return false
-  return (
-    hasRole('admin') || doc.uploadedBy === user.value.email || doc.uploadedBy === user.value.role
-  )
+const handleDragEnter = () => {
+  isDragging.value = true
 }
 
-// File selection and drag & drop
-function triggerFileSelect() {
-  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-  fileInput?.click()
+const handleDragLeave = () => {
+  isDragging.value = false
 }
 
-function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.files) {
-    addFiles(Array.from(target.files))
-  }
+const handleDrop = async (e) => {
+  isDragging.value = false
+  const files = Array.from(e.dataTransfer.files)
+  await uploadFiles(files)
 }
 
-function handleDragOver(event: DragEvent) {
-  event.preventDefault()
-  isDragOver.value = true
+const triggerFileInput = () => {
+  fileInput.value.click()
 }
 
-function handleDragLeave(event: DragEvent) {
-  event.preventDefault()
-  isDragOver.value = false
+const handleFileSelect = async (e) => {
+  const files = Array.from(e.target.files)
+  await uploadFiles(files)
 }
 
-function handleDrop(event: DragEvent) {
-  event.preventDefault()
-  isDragOver.value = false
-
-  if (event.dataTransfer?.files) {
-    addFiles(Array.from(event.dataTransfer.files))
-  }
-}
-
-function addFiles(newFiles: File[]) {
-  // Filter out duplicates
-  const existingNames = selectedFiles.value.map((f) => f.name)
-  const uniqueFiles = newFiles.filter((file) => !existingNames.includes(file.name))
-
-  selectedFiles.value.push(...uniqueFiles)
-
-  if (uniqueFiles.length !== newFiles.length) {
-    showNotification('warning', 'Duplicate Files', 'Some files were already selected and skipped.')
-  }
-}
-
-function removeFile(index: number) {
-  selectedFiles.value.splice(index, 1)
-  delete fileValidationErrors.value[index]
-}
-
-function clearSelectedFiles() {
-  selectedFiles.value = []
-  fileValidationErrors.value = {}
-}
-
-// Upload functionality
-async function startUpload() {
-  if (!user.value || validFiles.value.length === 0) return
-
-  isUploading.value = true
-  showGlobalProgress.value = true
-  totalUploads.value = validFiles.value.length
-  completedUploads.value = 0
-  globalUploadProgress.value = 0
+const uploadFiles = async (files) => {
+  if (!user.value || files.length === 0) return
 
   try {
-    for (let i = 0; i < validFiles.value.length; i++) {
-      const file = validFiles.value[i]
-      currentUploadFile.value = file.name
-      uploadingFiles.value.add(file.name)
+    for (const file of files) {
+      // Validate file
+      const validation = docsStore.validateFile(file)
+      if (!validation.isValid) {
+        alert(`${file.name}: ${validation.error}`)
+        continue
+      }
 
+      // Upload file
       await docsStore.uploadSingleFile(file, user.value.email || user.value.id)
-
-      uploadingFiles.value.delete(file.name)
-      completedUploads.value++
-      globalUploadProgress.value = Math.round((completedUploads.value / totalUploads.value) * 100)
     }
 
-    showNotification(
-      'success',
-      'Upload Complete',
-      `Successfully uploaded ${validFiles.value.length} file(s).`,
-    )
-    closeUploadModal()
+    alert(`Successfully uploaded ${files.length} file(s)`)
   } catch (error) {
     console.error('Upload failed:', error)
-    showNotification(
-      'error',
-      'Upload Failed',
-      error instanceof Error ? error.message : 'Unknown error occurred',
-    )
-  } finally {
-    isUploading.value = false
-    showGlobalProgress.value = false
-    uploadingFiles.value.clear()
+    alert('Upload failed: ' + error.message)
   }
 }
 
-function cancelUpload(doc: any) {
-  // Implementation for canceling individual upload
-  uploadingFiles.value.delete(doc.name)
+const showMore = () => {
+  console.log('Show more clicked')
+  // Implement pagination or load more documents
 }
 
-function cancelAllUploads() {
-  uploadingFiles.value.clear()
-  isUploading.value = false
-  showGlobalProgress.value = false
-  showNotification('info', 'Upload Cancelled', 'All uploads have been cancelled.')
+const maximizeDocument = async (doc) => {
+  console.log('Maximize document:', doc)
+  // Implement maximize/view details functionality, e.g., open modal or navigate to detail page
+  alert(`Opening detailed view for "${doc.name}"`)
 }
 
-function getFileUploadProgress(fileName: string): number {
-  // Get progress from store's upload progresses
-  for (const [, progress] of docsStore.uploadProgresses) {
-    if (progress.fileId.includes(fileName)) {
-      return progress.progress
+const getFileIcon = (docName) => {
+  const extension = docName.split('.').pop()?.toLowerCase() || '';
+
+  const icons = {
+    doc: `<svg width="43" height="43" viewBox="0 0 43 43" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <mask id="mask0_word" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="43" height="43">
+        <path d="M38.0625 1.625H4.9375C3.10806 1.625 1.625 3.10806 1.625 4.9375V38.0625C1.625 39.8919 3.10806 41.375 4.9375 41.375H38.0625C39.8919 41.375 41.375 39.8919 41.375 38.0625V4.9375C41.375 3.10806 39.8919 1.625 38.0625 1.625Z" fill="white" stroke="white" stroke-width="2"/>
+        <path d="M10.4583 12.6666L14.8749 30.3333L21.4999 15.9791L28.1249 30.3333L32.5416 12.6666" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </mask>
+      <g mask="url(#mask0_word)">
+        <path d="M-5 -5H48V48H-5V-5Z" fill="#5E777A"/>
+      </g>
+    </svg>`,
+    docx: `<svg width="43" height="43" viewBox="0 0 43 43" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <mask id="mask0_word" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="43" height="43">
+        <path d="M38.0625 1.625H4.9375C3.10806 1.625 1.625 3.10806 1.625 4.9375V38.0625C1.625 39.8919 3.10806 41.375 4.9375 41.375H38.0625C39.8919 41.375 41.375 39.8919 41.375 38.0625V4.9375C41.375 3.10806 39.8919 1.625 38.0625 1.625Z" fill="white" stroke="white" stroke-width="2"/>
+        <path d="M10.4583 12.6666L14.8749 30.3333L21.4999 15.9791L28.1249 30.3333L32.5416 12.6666" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </mask>
+      <g mask="url(#mask0_word)">
+        <path d="M-5 -5H48V48H-5V-5Z" fill="#5E777A"/>
+      </g>
+    </svg>`,
+    pdf: `<svg width="40" height="44" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M0.933105 4.4C0.933105 3.23305 1.39668 2.11389 2.22184 1.28873C3.047 0.46357 4.16615 0 5.33311 0L29.407 0L39.0664 9.65947V39.6C39.0664 40.767 38.6029 41.8861 37.7777 42.7113C36.9525 43.5364 35.8334 44 34.6664 44H5.33311C4.16615 44 3.047 43.5364 2.22184 42.7113C1.39668 41.8861 0.933105 40.767 0.933105 39.6V4.4ZM8.26644 17.6H3.86644V32.2667H6.79977V26.4H8.26644C9.43339 26.4 10.5525 25.9364 11.3777 25.1113C12.2029 24.2861 12.6664 23.167 12.6664 22C12.6664 20.833 12.2029 19.7139 11.3777 18.8887C10.5525 18.0636 9.43339 17.6 8.26644 17.6ZM19.9998 17.6H15.5998V32.2667H19.9998C21.1667 32.2667 22.2859 31.8031 23.111 30.9779C23.9362 30.1528 24.3998 29.0336 24.3998 27.8667V22C24.3998 20.833 23.9362 19.7139 23.111 18.8887C22.2859 18.0636 21.1667 17.6 19.9998 17.6ZM27.3331 32.2667V17.6H36.1331V20.5333H30.2664V23.4667H33.1998V26.4H30.2664V32.2667H27.3331Z" fill="#96362D"/>
+    </svg>`,
+    xls: `<svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21.1666 0.166626H4.49992C3.39485 0.166626 2.33504 0.605613 1.55364 1.38701C0.772239 2.16842 0.333252 3.22822 0.333252 4.33329V37.6666C0.333252 38.7717 0.772239 39.8315 1.55364 40.6129C2.33504 41.3943 3.39485 41.8333 4.49992 41.8333H29.4999C30.605 41.8333 31.6648 41.3943 32.4462 40.6129C33.2276 39.8315 33.6666 38.7717 33.6666 37.6666V12.6666L21.1666 0.166626ZM24.9166 37.6666H21.1666L16.9999 30.5833L12.8333 37.6666H9.08325L15.1249 28.2916L9.08325 18.9166H12.8333L16.9999 26L21.1666 18.9166H24.9166L18.8749 28.2916L24.9166 37.6666ZM19.0833 14.75V3.29163L30.5416 14.75H19.0833Z" fill="#557842"/>
+    </svg>`,
+    xlsx: `<svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21.1666 0.166626H4.49992C3.39485 0.166626 2.33504 0.605613 1.55364 1.38701C0.772239 2.16842 0.333252 3.22822 0.333252 4.33329V37.6666C0.333252 38.7717 0.772239 39.8315 1.55364 40.6129C2.33504 41.3943 3.39485 41.8333 4.49992 41.8333H29.4999C30.605 41.8333 31.6648 41.3943 32.4462 40.6129C33.2276 39.8315 33.6666 38.7717 33.6666 37.6666V12.6666L21.1666 0.166626ZM24.9166 37.6666H21.1666L16.9999 30.5833L12.8333 37.6666H9.08325L15.1249 28.2916L9.08325 18.9166H12.8333L16.9999 26L21.1666 18.9166H24.9166L18.8749 28.2916L24.9166 37.6666ZM19.0833 14.75V3.29163L30.5416 14.75H19.0833Z" fill="#557842"/>
+    </svg>`,
+    csv: `<svg width="48" height="38" viewBox="0 0 48 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.4165 26H16.4165V22.5H10.5832V15.5H16.4165V12H9.4165C8.75539 12 8.20161 12.224 7.75517 12.672C7.30873 13.12 7.08473 13.6738 7.08317 14.3334V23.6667C7.08317 24.3278 7.30717 24.8824 7.75517 25.3304C8.20317 25.7784 8.75695 26.0016 9.4165 26ZM18.5165 26H25.5165C26.1776 26 26.7322 25.776 27.1802 25.328C27.6282 24.88 27.8514 24.3263 27.8498 23.6667V20.1667C27.8498 19.5056 27.6258 18.8927 27.1778 18.328C26.7298 17.7634 26.1761 17.4818 25.5165 17.4834H22.0165V15.5H27.8498V12H20.8498C20.1887 12 19.6349 12.224 19.1885 12.672C18.7421 13.12 18.5181 13.6738 18.5165 14.3334V17.8334C18.5165 18.4945 18.7405 19.0879 19.1885 19.6137C19.6365 20.1395 20.1903 20.4016 20.8498 20.4H24.3498V22.5H18.5165V26ZM33.9165 26H37.4165L41.4998 12H37.9998L35.6665 20.05L33.3332 12H29.8332L33.9165 26ZM5.33317 37.6667C4.04984 37.6667 2.95162 37.2102 2.0385 36.297C1.12539 35.3839 0.668059 34.2849 0.666504 33V5.00004C0.666504 3.71671 1.12384 2.61848 2.0385 1.70537C2.95317 0.792262 4.05139 0.33493 5.33317 0.333374H42.6665C43.9498 0.333374 45.0488 0.790707 45.9635 1.70537C46.8782 2.62004 47.3347 3.71826 47.3332 5.00004V33C47.3332 34.2834 46.8766 35.3824 45.9635 36.297C45.0504 37.2117 43.9514 37.6683 42.6665 37.6667H5.33317Z" fill="#5073A8"/>
+    </svg>`,
+    txt: `<svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.1875 0.75C6.94974 0.75 4.80362 1.63895 3.22129 3.22129C1.63895 4.80362 0.75 6.94974 0.75 9.1875V32.8125C0.75 35.0503 1.63895 37.1964 3.22129 38.7787C4.80362 40.3611 6.94974 41.25 9.1875 41.25H32.8125C35.0503 41.25 37.1964 40.3611 38.7787 38.7787C40.3611 37.1964 41.25 35.0503 41.25 32.8125V9.1875C41.25 6.94974 40.3611 4.80362 38.7787 3.22129C37.1964 1.63895 35.0503 0.75 32.8125 0.75H9.1875ZM12.5625 10.875H29.4375C29.8851 10.875 30.3143 11.0528 30.6307 11.3693C30.9472 11.6857 31.125 12.1149 31.125 12.5625C31.125 13.0101 30.9472 13.4393 30.6307 13.7557C30.3143 14.0722 29.8851 14.25 29.4375 14.25H12.5625C12.1149 14.25 11.6857 14.0722 11.3693 13.7557C11.0528 13.4393 10.875 13.0101 10.875 12.5625C10.875 12.1149 11.0528 11.6857 11.3693 11.3693C11.6857 11.0528 12.1149 10.875 12.5625 10.875ZM12.5625 19.3125H22.6875C23.1351 19.3125 23.5643 19.4903 23.8807 19.8068C24.1972 20.1232 24.375 20.5524 24.375 21C24.375 21.4476 24.1972 21.8768 23.8807 22.1932C23.5643 22.5097 23.1351 22.6875 22.6875 22.6875H12.5625C12.1149 22.6875 11.6857 22.5097 11.3693 22.1932C11.0528 21.8768 10.875 21.4476 10.875 21C10.875 20.5524 11.0528 20.1232 11.3693 19.8068C11.6857 19.4903 12.1149 19.3125 12.5625 19.3125ZM12.5625 27.75H29.4375C29.8851 27.75 30.3143 27.9278 30.6307 28.2443C30.9472 28.5607 31.125 28.9899 31.125 29.4375C31.125 29.8851 30.9472 30.3143 30.6307 30.6307C30.3143 30.9472 29.8851 31.125 29.4375 31.125H12.5625C12.1149 31.125 11.6857 30.9472 11.3693 30.6307C11.0528 30.3143 10.875 29.8851 10.875 29.4375C10.875 28.9899 11.0528 28.5607 11.3693 28.2443C11.6857 27.9278 12.1149 27.75 12.5625 27.75Z" fill="#B99D6E"/>
+    </svg>`,
+    image: `<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="4" fill="#5E777A"/>
+      <circle cx="12" cy="12" r="2" fill="white"/>
+      <path d="M8 28L20 16L32 28H8Z" fill="white"/>
+    </svg>`
+  }
+
+  let iconType = '';
+  if (['doc', 'docx'].includes(extension)) iconType = 'doc';
+  else if (extension === 'pdf') iconType = 'pdf';
+  else if (['xls', 'xlsx'].includes(extension)) iconType = 'xls';
+  else if (extension === 'csv') iconType = 'csv';
+  else if (['txt'].includes(extension)) iconType = 'txt';
+  else if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(extension)) iconType = 'image';
+
+  return icons[iconType] || icons.txt;
+}
+
+// Auth check on mount
+onMounted(async () => {
+  await docsStore.forceReload()
+
+  // Check authentication
+  if (!authStore.isAuthenticated) {
+    const hasToken = localStorage.getItem('access_token')
+    if (!hasToken) {
+      router.push({ name: 'Login', query: { redirect: '/dashboard' } })
     }
   }
-  return 0
-}
-
-// Modal management
-function closeUploadModal() {
-  if (isUploading.value) {
-    if (confirm('Upload in progress. Are you sure you want to close?')) {
-      cancelAllUploads()
-      showUploadModal.value = false
-      clearSelectedFiles()
-    }
-  } else {
-    showUploadModal.value = false
-    clearSelectedFiles()
-  }
-}
-
-// Document actions
-async function downloadDoc(doc: any) {
-  try {
-    await docsStore.downloadDoc(doc.id)
-    showNotification('success', 'Download Started', `Downloading ${doc.name}`)
-  } catch (error) {
-    showNotification('error', 'Download Failed', 'Failed to download the document')
-  }
-}
-
-async function deleteDoc(id: number) {
-  if (confirm('Are you sure you want to delete this document?')) {
-    try {
-      await docsStore.deleteDoc(id)
-      showNotification('success', 'Document Deleted', 'Document was successfully deleted')
-    } catch (error) {
-      showNotification('error', 'Delete Failed', 'Failed to delete the document')
-    }
-  }
-}
-
-async function handleLogout() {
-  try {
-    console.log('🔄 Dashboard logout clicked')
-    await logout()
-    console.log('✅ Logout completed successfully')
-  } catch (error) {
-    console.error('❌ Logout failed in dashboard:', error)
-    // The logout function already handles fallbacks, so we don't need to do much here
-    showNotification('error', 'Logout Issue', 'Logout completed but there may have been an issue')
-  }
-}
-
-// Utility functions
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function formatFileSize(bytes: number): string {
-  return docsStore.formatFileSize(bytes)
-}
-
-function getFileIconByType(type: string): string {
-  const iconMap: Record<string, string> = {
-    'application/pdf': '📄',
-    'application/msword': '📝',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
-    'application/vnd.ms-excel': '📊',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
-    'text/plain': '📄',
-    'image/png': '🖼️',
-    'image/jpeg': '🖼️',
-    'image/gif': '🖼️',
-  }
-  return iconMap[type] || '📄'
-}
-
-function getStatusText(status?: string): string {
-  switch (status) {
-    case 'uploading':
-      return 'Uploading'
-    case 'failed':
-      return 'Failed'
-    case 'completed':
-      return 'Completed'
-    default:
-      return 'Ready'
-  }
-}
-
-function getActivityIcon(type: string): string {
-  switch (type) {
-    case 'upload':
-      return '⬆️'
-    case 'delete':
-      return '🗑️'
-    case 'download':
-      return '⬇️'
-    default:
-      return '📝'
-  }
-}
-
-// Notification system
-function showNotification(
-  type: 'success' | 'error' | 'warning' | 'info',
-  title: string,
-  message: string,
-  timeout = 5000,
-) {
-  const id = Date.now().toString()
-  notifications.value.push({ id, type, title, message, timeout })
-
-  if (timeout > 0) {
-    setTimeout(() => dismissNotification(id), timeout)
-  }
-}
-
-function dismissNotification(id: string) {
-  const index = notifications.value.findIndex((n) => n.id === id)
-  if (index > -1) {
-    notifications.value.splice(index, 1)
-  }
-}
-
-onMounted(() => {
-  docsStore.forceReload()
 })
 </script>
 
 <style scoped>
-/* Enhanced Styles for File Upload Dashboard */
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-.dashboard {
-  position: relative;
-  width: 100%;
-  max-width: none;
+.fylor-dashboard {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(180deg, #F4E6CF 0%, #FBEED8 100%);
   min-height: 100vh;
-  background-color: #f8f9fa;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  overflow-x: hidden;
-
-  background: #eeaeca;
-  background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);
+  padding: 40px 20px;
 }
 
-.dashboard-header {
-  background: white;
-  border-bottom: 1px solid #e9ecef;
-  padding: 0 24px;
+.container {
+  max-width: 1265px;
+  margin: 0 auto;
 }
 
-.header-content {
+/* Header */
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 64px;
-  width: 100%;
-  margin: 0 auto;
+  margin-bottom: 40px;
 }
 
-.header-content h1 {
+.logo {
+  font-family: 'Jersey 10', sans-serif;
+  font-size: 48px;
+  color: #96362D;
+  font-weight: 400;
   margin: 0;
-  color: #343a40;
-  font-size: 24px;
-  font-weight: 600;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.user-info {
-  color: #6c757d;
-  font-size: 14px;
-}
-
-.user-role {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-left: 8px;
-}
-
-.user-role.admin {
-  background-color: #fff2cc;
-  color: #8a6914;
-}
-
-.user-role.user {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.logout-button {
-  padding: 8px 16px;
-  background-color: #dc3545;
-  color: white;
+.profile-button {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #96362D;
   border: none;
-  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.logout-button:hover {
-  background-color: #c82333;
-}
-
-.dashboard-nav {
-  background: white;
-  border-bottom: 1px solid #e9ecef;
-  padding: 0 24px;
-  display: flex;
-  gap: 32px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.nav-link {
-  padding: 16px 0;
-  color: #6c757d;
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.nav-link:hover,
-.nav-link.active {
-  color: #495057;
-  border-bottom-color: #007bff;
-}
-
-.dashboard-main {
-  width: 100%;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-/* Stats Cards */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.stat-card {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.stat-icon {
-  font-size: 32px;
-  width: 56px;
-  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fa;
-  border-radius: 12px;
+  transition: transform 0.2s ease;
 }
 
-.stat-number {
-  font-size: 28px;
-  font-weight: 700;
-  color: #343a40;
-  margin-bottom: 4px;
+.profile-button:hover {
+  transform: scale(1.05);
 }
 
-.stat-label {
-  color: #6c757d;
-  font-size: 14px;
+/* Welcome Section */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 50px;
 }
 
-/* Document Management Section */
-.documents-section,
-.activity-section {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+.welcome-text {
+  font-size: 24px;
+  color: #5E777A;
+  margin: 0 0 10px 0;
+  font-weight: 400;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 24px 0;
-  margin-bottom: 24px;
-}
-
-.section-header h2 {
+.user-name {
+  font-size: 40px;
+  color: #5E777A;
   margin: 0;
-  color: #343a40;
-  font-size: 20px;
   font-weight: 600;
 }
 
-/* Button Styles */
-.primary-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+/* Upload Area */
+.upload-area {
+  border: 3px dashed #B99D6E;
+  border-radius: 20px;
+  padding: 60px 40px;
+  text-align: center;
+  margin-bottom: 60px;
+  transition: all 0.3s ease;
+}
+
+.upload-area.drag-over {
+  border-color: #96362D;
+  background-color: rgba(150, 54, 45, 0.05);
+}
+
+.upload-title {
+  font-size: 24px;
+  color: #96362D;
+  margin: 0 0 20px 0;
   font-weight: 500;
-  transition: all 0.2s;
-  display: flex;
+}
+
+.upload-button {
+  background: linear-gradient(135deg, #96362D 0%, #EA5039 100%);
+  border: none;
+  border-radius: 30px;
+  padding: 15px 40px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  transition: transform 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
 
-.primary-button:hover:not(:disabled) {
-  background-color: #0056b3;
-  transform: translateY(-1px);
+.upload-button:hover {
+  transform: translateY(-2px);
 }
 
-.primary-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.upload-button-icon {
+  font-size: 24px;
 }
 
-.primary-button.uploading {
-  background-color: #6c757d;
-}
-
-.secondary-button {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+.file-types {
   font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  color: #5E777A;
+  margin: 15px 0 0 0;
+  font-weight: 400;
 }
 
-.secondary-button:hover {
-  background-color: #545b62;
+.file-input {
+  display: none;
 }
 
-.button-icon {
-  font-size: 16px;
+/* Recent Docs Section */
+.recent-docs-section {
+  background-color: #FBEED8;
+  border-radius: 30px;
+  padding: 40px;
 }
 
-.button-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #ffffff;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.section-title {
+  font-size: 32px;
+  color: #5E777A;
+  text-align: center;
+  margin: 0 0 40px 0;
+  font-weight: 600;
 }
 
 /* Filters */
 .filters {
   display: flex;
-  gap: 16px;
-  padding: 0 24px 24px;
+  gap: 20px;
+  margin-bottom: 40px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .search-input {
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
+  width: 100%;
+  padding: 12px 12px 12px 45px;
+  border: 2px solid #B99D6E;
+  border-radius: 25px;
   font-size: 14px;
-  width: 250px;
-  transition: border-color 0.2s;
+  background-color: transparent;
+  color: #5E777A;
+  outline: none;
+  font-family: 'Poppins', sans-serif;
 }
 
-.search-input:focus {
+.search-input::placeholder {
+  color: #B99D6E;
+}
+
+.sort-select {
+  padding: 12px 40px 12px 20px;
+  border: 2px solid #B99D6E;
+  border-radius: 25px;
+  font-size: 14px;
+  background-color: transparent;
+  color: #5E777A;
+  cursor: pointer;
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  font-family: 'Poppins', sans-serif;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23B99D6E' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #495057;
+  gap: 10px;
+  padding: 12px 20px;
+  border: 2px solid #B99D6E;
+  border-radius: 25px;
   font-size: 14px;
+  color: #5E777A;
+  cursor: pointer;
+  background-color: transparent;
+  font-family: 'Poppins', sans-serif;
+  user-select: none;
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
   cursor: pointer;
 }
 
-.sort-select {
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 14px;
+/* Documents Grid */
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 216px);
+  gap: 50px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.document-card {
+  width: 216px;
+  height: 150px;
   background-color: white;
-}
-
-/* Documents Table */
-.documents-table-container {
-  padding: 0 24px 24px;
-}
-
-.documents-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.documents-table th,
-.documents-table td {
-  text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.documents-table th {
-  color: #495057;
-  font-weight: 600;
-  font-size: 14px;
-  background-color: #f8f9fa;
-}
-
-.documents-table td {
-  color: #343a40;
-  font-size: 14px;
-}
-
-.documents-table tr.uploading {
-  background-color: #f8f9fa;
-}
-
-.doc-name {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.doc-icon {
-  font-size: 18px;
-  min-width: 20px;
-}
-
-.doc-info {
-  flex: 1;
-}
-
-.doc-title {
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.upload-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 4px;
-  background-color: #e9ecef;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-bar.large {
-  height: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #007bff;
-  transition: width 0.3s ease;
-  border-radius: inherit;
-}
-
-.progress-text {
-  font-size: 12px;
-  color: #6c757d;
-  min-width: 35px;
-}
-
-/* Status Badge */
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.uploading {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.status-badge.completed {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-badge.failed {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-/* Action Buttons */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.action-button {
-  padding: 6px 8px;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-button.download {
-  background-color: #28a745;
-  color: white;
-}
-
-.action-button.download:hover {
-  background-color: #218838;
-}
-
-.action-button.delete {
-  background-color: #dc3545;
-  color: white;
-}
-
-.action-button.delete:hover:not(:disabled) {
-  background-color: #c82333;
-}
-
-.action-button.cancel {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.action-button.cancel:hover {
-  background-color: #e0a800;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Empty State */
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: #6c757d;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.empty-state h3 {
-  margin: 0 0 8px;
-  color: #495057;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Activity Feed */
-.activity-feed {
-  padding: 0 24px 24px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  background-color: #f8f9fa;
-}
-
-.activity-description {
-  color: #343a40;
-  font-size: 14px;
-}
-
-.activity-time {
-  color: #6c757d;
-  font-size: 12px;
-  margin-top: 2px;
-}
-
-/* Enhanced Upload Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(2px);
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  border-radius: 15px;
+  padding: 40px 20px 20px;
   display: flex;
   flex-direction: column;
-}
-
-.upload-modal {
-  max-width: 800px;
-}
-
-.modal-header {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e9ecef;
-  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
 }
 
-.modal-header h3 {
-  margin: 0;
-  color: #343a40;
-  font-size: 18px;
-  font-weight: 600;
+.document-card:hover {
+  transform: translateY(-5px);
 }
 
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.close-button:hover {
-  color: #dc3545;
-}
-
-.modal-body {
-  padding: 24px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid #e9ecef;
-  flex-shrink: 0;
-}
-
-/* Enhanced Upload Area */
-.upload-area {
-  border: 2px dashed #ced4da;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-  overflow: hidden;
-}
-
-.upload-area.drag-over {
-  border-color: #007bff;
-  background-color: #f0f8ff;
-  transform: scale(1.02);
-}
-
-.upload-area.has-files {
-  border-style: solid;
-  border-color: #28a745;
-}
-
-.upload-zone {
-  padding: 48px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.upload-zone:hover {
-  background-color: #f8f9fa;
-}
-
-.upload-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.7;
-}
-
-.upload-zone h4 {
-  margin: 0 0 8px;
-  color: #495057;
-  font-size: 18px;
-}
-
-.upload-zone p {
-  margin: 0 0 16px;
-  color: #6c757d;
-}
-
-.link-text {
-  color: #007bff;
-  text-decoration: underline;
-}
-
-.upload-info {
-  margin-top: 16px;
-}
-
-.upload-info small {
-  color: #6c757d;
-  line-height: 1.4;
-}
-
-/* File Preview List */
-.file-preview-list {
-  padding: 20px;
-}
-
-.file-preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.file-preview-header h4 {
-  margin: 0;
-  color: #343a40;
-}
-
-.clear-button {
-  background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-button:hover {
-  background-color: #dc3545;
-  color: white;
-}
-
-.file-items {
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 16px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  transition: all 0.2s;
-}
-
-.file-item:hover {
-  background-color: #f8f9fa;
-}
-
-.file-item.invalid {
-  border-color: #dc3545;
-  background-color: #fdf2f2;
-}
-
-.file-item.uploading {
-  border-color: #007bff;
-  background-color: #f0f8ff;
-}
-
-.file-icon {
-  font-size: 24px;
-  min-width: 30px;
-  text-align: center;
-}
-
-.file-details {
-  flex: 1;
-  min-width: 0;
+.file-icon-wrapper {
+  position: absolute;
+  top: -25px;
+  left: 20px;
+  z-index: 1;
 }
 
 .file-name {
-  font-weight: 500;
-  color: #343a40;
-  margin-bottom: 4px;
-  word-break: break-word;
+  font-size: 16px;
+  color: #5E777A;
+  margin: 0 0 5px 0;
+  font-weight: 600;
+  text-align: center;
 }
 
 .file-meta {
   font-size: 12px;
-  color: #6c757d;
-  margin-bottom: 4px;
-}
-
-.file-error {
-  font-size: 12px;
-  color: #dc3545;
-  margin-top: 4px;
-}
-
-.file-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.file-progress .progress-bar {
-  height: 4px;
-}
-
-.remove-file-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  font-size: 12px;
-}
-
-.remove-file-button:hover {
-  background-color: #f8d7da;
-}
-
-.upload-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #e9ecef;
-  border-top: 2px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.add-more-button {
-  width: 100%;
-  padding: 12px;
-  border: 1px dashed #007bff;
-  background: none;
-  color: #007bff;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.add-more-button:hover {
-  background-color: #f0f8ff;
-  border-style: solid;
-}
-
-/* Upload Options */
-.upload-options {
-  margin: 20px 0;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.option-group {
-  margin-bottom: 12px;
-}
-
-.option-group:last-child {
-  margin-bottom: 0;
-}
-
-/* Upload Summary */
-.upload-summary {
-  padding: 16px;
-  background-color: #e7f3ff;
-  border: 1px solid #b8daff;
-  border-radius: 8px;
-  margin-top: 16px;
-}
-
-.summary-item {
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #495057;
-}
-
-.summary-item:last-child {
-  margin-bottom: 0;
-}
-
-/* Global Upload Progress Overlay */
-.upload-progress-overlay {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1001;
-  animation: slideInUp 0.3s ease;
-}
-
-.progress-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  min-width: 300px;
-  border: 1px solid #e9ecef;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.progress-header h4 {
-  margin: 0;
-  color: #343a40;
-  font-size: 16px;
-}
-
-.cancel-all-button {
-  background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cancel-all-button:hover {
-  background-color: #dc3545;
-  color: white;
-}
-
-.global-progress {
-  margin-bottom: 12px;
-}
-
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #6c757d;
-}
-
-.current-file {
-  font-size: 12px;
-  color: #6c757d;
+  color: #5E777A;
   text-align: center;
+  margin-bottom: 10px;
 }
 
-/* Notifications */
-.notifications {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1002;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 400px;
-}
-
-.notification {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border-left: 4px solid;
-  animation: slideInRight 0.3s ease;
-}
-
-.notification.success {
-  border-left-color: #28a745;
-}
-
-.notification.error {
-  border-left-color: #dc3545;
-}
-
-.notification.warning {
-  border-left-color: #ffc107;
-}
-
-.notification.info {
-  border-left-color: #007bff;
-}
-
-.notification-content {
-  flex: 1;
-}
-
-.notification-title {
-  font-weight: 600;
-  color: #343a40;
-  margin-bottom: 4px;
-  font-size: 14px;
-}
-
-.notification-message {
-  color: #6c757d;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.notification-close {
+.maximize-button {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
   background: none;
   border: none;
   cursor: pointer;
-  color: #6c757d;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  width: 20px;
-  height: 20px;
+  padding: 5px;
+  transition: transform 0.2s ease;
+}
+
+.maximize-button:hover {
+  transform: scale(1.1);
+}
+
+/* Show More Button */
+.show-more-wrapper {
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 
-.notification-close:hover {
-  color: #343a40;
+.show-more-button {
+  background: linear-gradient(135deg, #5E777A 0%, #394960 100%);
+  border: none;
+  border-radius: 30px;
+  padding: 15px 60px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
 
-/* Animations */
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.show-more-button:hover {
+  transform: translateY(-2px);
 }
 
-@keyframes slideInUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
-  .header-content {
+  .header {
     flex-direction: column;
-    height: auto;
-    padding: 16px 0;
-    gap: 12px;
+    gap: 20px;
   }
 
-  .dashboard-nav {
-    flex-wrap: wrap;
+  .logo {
+    font-size: 36px;
+  }
+
+  .welcome-text {
+    font-size: 20px;
+  }
+
+  .user-name {
+    font-size: 32px;
+  }
+
+  .upload-area {
+    padding: 40px 20px;
+  }
+
+  .upload-title {
+    font-size: 20px;
   }
 
   .filters {
@@ -1898,73 +650,38 @@ onMounted(() => {
     align-items: stretch;
   }
 
-  .search-input {
+  .search-wrapper {
     width: 100%;
   }
 
-  .documents-table-container {
-    overflow-x: auto;
-  }
-
-  .stats-grid {
+  .documents-grid {
     grid-template-columns: 1fr;
+    gap: 30px;
   }
 
-  .modal-content {
-    width: 95%;
-    margin: 10px;
+  .document-card {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
   }
 
-  .upload-modal {
-    max-width: none;
-  }
-
-  .notifications {
-    left: 10px;
-    right: 10px;
-    max-width: none;
-  }
-
-  .upload-progress-overlay {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-  }
-
-  .progress-card {
-    min-width: auto;
-  }
-
-  .file-items {
-    max-height: 200px;
-  }
-
-  .action-buttons {
-    flex-wrap: wrap;
+  .recent-docs-section {
+    padding: 30px 20px;
   }
 }
 
 @media (max-width: 480px) {
-  .dashboard-main {
-    padding: 16px;
+  .fylor-dashboard {
+    padding: 20px 10px;
   }
 
-  .section-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .upload-zone {
-    padding: 32px 16px;
-  }
-
-  .upload-icon {
-    font-size: 36px;
-  }
-
-  .upload-zone h4 {
+  .upload-button {
+    padding: 12px 30px;
     font-size: 16px;
+  }
+
+  .section-title {
+    font-size: 26px;
   }
 }
 </style>
