@@ -1,5 +1,5 @@
 {
-  "name": "securedocs-backend",
+  "name": "fylor-backend",
   "version": "1.0.0",
   "description": "Production-ready file upload backend for SecureDocs",
   "main": "server.js",

@@ -62,7 +62,7 @@ export const useDocsStore = defineStore('docs', () => {
       {
         id: 1,
         name: 'Project Overview.pdf',
-        uploadedBy: 'admin@securedocs.com',
+        uploadedBy: 'admin@fylor.com',
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         size: 2300000,
         type: 'application/pdf',
@@ -71,7 +71,7 @@ export const useDocsStore = defineStore('docs', () => {
       {
         id: 2,
         name: 'Budget Report.xlsx',
-        uploadedBy: 'user@securedocs.com',
+        uploadedBy: 'user@fylor.com',
         createdAt: new Date(Date.now() - 172800000).toISOString(),
         size: 1500000,
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -80,7 +80,7 @@ export const useDocsStore = defineStore('docs', () => {
       {
         id: 3,
         name: 'Meeting Notes.docx',
-        uploadedBy: 'admin@securedocs.com',
+        uploadedBy: 'admin@fylor.com',
         createdAt: new Date(Date.now() - 259200000).toISOString(),
         size: 890000,
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

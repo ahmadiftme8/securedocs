@@ -140,42 +140,52 @@ export function useAuth() {
     checkAuth()
   }
 
-  // Mock login - IMPROVED error handling
+  // Mock login - OFFLINE implementation
   async function mockLogin(role: 'admin' | 'user'): Promise<boolean> {
-    const mockEmail = `${role}@securedocs.com`
-    const mockPassword = 'Password123'
+    const isMockEnabled = import.meta.env.VITE_ENABLE_MOCK_LOGIN === 'true'
 
-    console.log(`🎭 Attempting mock login as ${role}`)
+    if (!isMockEnabled) {
+      console.warn('⚠️ Mock login is disabled in environment')
+      return false
+    }
+
+    console.log(`🎭 Performing OFFLINE mock login as ${role}`)
+    isLoading.value = true
+    error.value = null
 
     try {
-      // Try to login first
-      const loginSuccess = await login({ email: mockEmail, password: mockPassword })
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800))
 
-      if (loginSuccess) {
-        return true
+      const mockUser = {
+        id: `mock-${role}-id`,
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: `${role}@fylor.com`,
+        email_confirmed_at: new Date().toISOString(),
+        phone: '',
+        confirmed_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+        app_metadata: { provider: 'email', providers: ['email'] },
+        user_metadata: {
+          name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
+          role: role
+        },
+        identities: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }
 
-      // If login fails, try to register
-      console.log(`📝 Mock user doesn't exist, creating ${role} account...`)
-      const registerSuccess = await registerUser({
-        email: mockEmail,
-        password: mockPassword,
-        name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
-        role
-      })
-
-      if (registerSuccess) {
-        // After registration, user needs to confirm email
-        error.value = 'Mock account created. Please check email for confirmation.'
-        return false
-      }
-
-      return false
+      console.log('✅ Offline mock login successful')
+      authStore.setUser(mockUser as any) // Use 'as any' to bypass strict SupabaseUser type requirements if needed
+      return true
 
     } catch (err: any) {
       console.error('❌ Mock login error:', err)
       error.value = err.message || 'Mock login failed'
       return false
+    } finally {
+      isLoading.value = false
     }
   }
 

@@ -9,11 +9,19 @@ const DashboardPage = () => import('@/pages/DashboardPage.vue')
 const AdminPanel = () => import('@/pages/AdminPanel.vue')
 const ProfilePage = () => import('@/pages/ProfilePage.vue')
 const UnauthorizedPage = () => import('@/pages/UnauthorizedPage.vue')
+const LandingPage = () => import('@/pages/LandingPage.vue')
 
 const routes: RouteRecordRaw[] = [
+
+
   {
     path: '/',
-    redirect: '/dashboard',
+    name: 'Home',
+    component: LandingPage,
+    meta: {
+      requiresGuest: true,
+      title: 'Fylor - Files that think',
+    },
   },
   {
     path: '/login',
@@ -21,7 +29,7 @@ const routes: RouteRecordRaw[] = [
     component: LoginPage,
     meta: {
       requiresGuest: true,
-      title: 'Login - SecureDocs',
+      title: 'Login - Fylor',
     },
   },
   {
@@ -30,7 +38,7 @@ const routes: RouteRecordRaw[] = [
     component: RegisterPage,
     meta: {
       requiresGuest: true,
-      title: 'Register - SecureDocs',
+      title: 'Register - Fylor',
     },
   },
   {
@@ -39,7 +47,7 @@ const routes: RouteRecordRaw[] = [
     component: DashboardPage,
     meta: {
       requiresAuth: true,
-      title: 'Dashboard - SecureDocs',
+      title: 'Dashboard - Fylor',
     },
   },
   {
@@ -48,7 +56,7 @@ const routes: RouteRecordRaw[] = [
     component: ProfilePage,
     meta: {
       requiresAuth: true,
-      title: 'Profile - SecureDocs',
+      title: 'Profile - Fylor',
     },
   },
   {
@@ -58,7 +66,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresRole: 'admin',
-      title: 'Admin Panel - SecureDocs',
+      title: 'Admin Panel - Fylor',
     },
   },
   {
@@ -66,7 +74,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Unauthorized',
     component: UnauthorizedPage,
     meta: {
-      title: 'Unauthorized - SecureDocs',
+      title: 'Unauthorized - Fylor',
     },
   },
   {
@@ -89,7 +97,7 @@ router.beforeEach(async (to, from, next) => {
   const { checkAuth } = useAuth()
 
   // Set page title
-  document.title = (to.meta.title as string) || 'SecureDocs'
+  document.title = (to.meta.title as string) || 'Fylor'
 
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
